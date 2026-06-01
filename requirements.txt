@@ -1,0 +1,11 @@
+flet>=0.24.0
+fastapi>=0.115.0
+uvicorn>=0.32.0
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-chroma>=0.1.0
+chromadb>=0.5.0
+ollama>=0.4.0
+Pillow>=10.0.0
+pydantic>=2.0.0
+httpx>=0.27.0

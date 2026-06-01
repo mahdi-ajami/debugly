@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# ChromaDB
+db/chroma_data/
+
+# Bandit state
+db/bandit_state.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Assets (user-generated)
+assets/*.png
+assets/*.jpg
+
+# Logs
+*.log
