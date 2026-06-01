@@ -8,7 +8,7 @@
 <p align="center">
   Take a screenshot of any error → AI understands it → Finds the best solution → Gets smarter over time.
   <br/>
-  <strong>100% offline · Privacy-first · Self-improving</strong>
+  <strong>100% offline · Privacy-first · Self-improving · Flat UI</strong>
 </p>
 
 <p align="center">
@@ -55,9 +55,9 @@
     <td>Everything runs locally on your machine. Zero data leaves your computer. No API keys, no cloud, no tracking.</td>
   </tr>
   <tr>
-    <td align="center">🎨</td>
-    <td><strong>Modern Desktop UI</strong></td>
-    <td>Clean, responsive interface built with Flet — familiar, fast, and visually polished.</td>
+    <td align="center">🪟</td>
+    <td><strong>Flat UI</strong></td>
+    <td>Clean slate-based design with frosted panels, smooth animations, drag-and-drop zone, and dark/light theme support.</td>
   </tr>
   <tr>
     <td align="center">📦</td>
@@ -74,10 +74,12 @@
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| 🖥️ **Desktop UI** | <img src="https://img.shields.io/badge/Flet-14B8FF?logo=flet&logoColor=white" /> | Python-based Flutter UI framework |
-| ⚙️ **Backend** | <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" /> | Internal asynchronous API server |
-| 👁️ **Vision** | <img src="https://img.shields.io/badge/LLaVA-000000?logo=ollama&logoColor=white" /> | Screenshot → error text extraction |
-| 🧠 **LLM** | <img src="https://img.shields.io/badge/Llama_3.1-000000?logo=ollama&logoColor=white" /> | Solution generation & reasoning |
+| 🖥️ **Desktop UI** | <img src="https://img.shields.io/badge/Flet-14B8FF?logo=flet&logoColor=white" /> | Python-based Flutter UI framework with flat design |
+| 🔌 **Provider System** | Ollama / OpenAI | Hot-swappable AI providers per role |
+| ⚙️ **Backend** | <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" /> | Core engine (LLM orchestration) |
+| 👁️ **Vision** | <img src="https://img.shields.io/badge/LLaVA_7B-000000?logo=ollama&logoColor=white" /> | Screenshot → error text extraction |
+| 🧠 **LLM** | <img src="https://img.shields.io/badge/Qwen3_Coder_30B-000000?logo=ollama&logoColor=white" /> | Solution generation & reasoning |
+| 🧩 **Embedding** | <img src="https://img.shields.io/badge/mxbai_embed_large-000000?logo=ollama&logoColor=white" /> | Semantic embedding for RAG |
 | 📊 **Vector DB** | <img src="https://img.shields.io/badge/ChromaDB-EA5E2E" /> | Persistent semantic search |
 | 🔗 **Orchestration** | <img src="https://img.shields.io/badge/LangChain-1C3C5C" /> | RAG pipeline & chain management |
 | 🎯 **RL Engine** | ε-Greedy Bandit | Epsilon-Greedy Multi-Armed Bandit |
@@ -111,9 +113,9 @@ source .venv/bin/activate       # Linux / macOS
 pip install -r requirements.txt
 
 # 4. Pull the required AI models
-ollama pull llama3.1
-ollama pull llava
-ollama pull nomic-embed-text
+ollama pull qwen3-coder:30b
+ollama pull llava:7b
+ollama pull mxbai-embed-large:latest
 
 # 5. Seed the knowledge base
 python scripts/seed_kb.py
@@ -122,7 +124,50 @@ python scripts/seed_kb.py
 python main.py
 ```
 
-> 🎉 The app will start the internal FastAPI server, initialize ChromaDB, and open the Debugly desktop window. You're ready to debug!
+> 🎉 The app will initialize ChromaDB and open the Debugly desktop window. You're ready to debug!
+
+---
+
+## 🔌 Custom Providers
+
+Debugly supports both **Ollama** and **OpenAI-compatible** API providers for every model role.
+
+| Role | Default Model | Customizable |
+|------|--------------|--------------|
+| 🧠 **LLM** | `qwen3-coder:30b` | Base URL, model, API key |
+| 👁️ **VLM (Vision)** | `llava:7b` | Base URL, model, API key |
+| 💬 **Chat** | `qwen3-coder:30b` | Base URL, model, API key |
+| 📝 **Code** | `qwen3-coder:30b` | Base URL, model, API key |
+| 🔤 **Embedding** | `mxbai-embed-large:latest` | Base URL, model, API key |
+
+Configure everything from **Settings → AI Providers** in the app — no need to edit config files. Supports OpenAI-compatible APIs (e.g., LiteLLM, LocalAI, vLLM) with custom `base_url` and `api_key`.
+
+---
+
+## 🖥️ Interface
+
+```
+┌────────────────────────────────────────────────────────┐
+│  ┌────────┐  ┌──────────────────────────────────────┐  │
+│  │  Home   │  │                                      │  │
+│  │  Debug  │  │    Frosted glass content area        │  │
+│  │ History │  │    with animated transitions         │  │
+│  │Settings │  │                                      │  │
+│  │   KB    │  │    ┌── Drag & Drop ──────────────┐   │  │
+│  │         │  │    │  Drop screenshot here        │   │  │
+│  │         │  │    │  or click to browse           │   │  │
+│  └────────┘  │    └──────────────────────────────┘   │  │
+│              │    ┌── Chat ───────┐ ┌── Sources ──┐  │  │
+│              │    │  💬 ...       │ │  doc 1      │  │  │
+│              │    │  🤖 ...       │ │  doc 2      │  │  │
+│              │    └───────────────┘ └─────────────┘  │  │
+│              │    [Type error message...] [Send]      │  │
+│              │    [👍 Was this helpful? 👎]           │  │
+│  ┌──────────┴──────────────────────────────────────┐  │  │
+│  │  Status Bar: ● Ollama  │  KB: 12 docs            │  │  │
+│  └─────────────────────────────────────────────────┘  │  │
+└────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -134,36 +179,47 @@ debugly/
 │
 ├── core/                        # Core AI & ML logic
 │   ├── agent.py                 # LangChain orchestrator agent
-│   ├── rag_pipeline.py          # Retrieval-Augmented Generation pipeline
+│   ├── rag_pipeline.py          # RAG pipeline
 │   ├── vlm_handler.py           # LLaVA integration for screenshot OCR
 │   ├── reward_system.py         # Multi-Armed Bandit RL engine
-│   └── config.py                # Central configuration & constants
+│   └── config.py                # Central configuration
 │
-├── app/                         # Desktop UI
-│   ├── main_view.py             # Main window layout & event handling
-│   └── components/              # Reusable UI widgets
-│       ├── chat_bubble.py       # Message bubble component
+├── app/                         # Desktop UI (Glass Design)
+│   ├── main_view.py             # Navigation rail + view routing
+│   ├── theme.py                 # Glass/Minimal theme system
+│   ├── views/
+│   │   ├── home_view.py         # Dashboard with stats
+│   │   ├── debug_view.py        # Debug interface (chat + sources)
+│   │   ├── history_view.py      # Search history
+│   │   ├── settings_view.py     # App settings
+│   │   └── kb_view.py           # Knowledge base management
+│   └── components/
+│       ├── chat_bubble.py       # Markdown-rendered chat bubbles
+│       ├── code_block.py        # Syntax-highlighted code with copy
+│       ├── drag_drop_zone.py    # Drag-and-drop upload zone
 │       ├── feedback_bar.py      # 👍 / 👎 feedback controls
-│       └── solution_card.py     # Sources & references panel
+│       ├── skeleton.py          # Shimmer loading states
+│       └── status_bar.py        # Bottom status indicator
 │
 ├── db/                          # Vector database
-│   └── chroma.py                # ChromaDB client & collection management
+│   └── chroma.py                # ChromaDB client
 │
 ├── models/                      # Data models
-│   └── schemas.py               # Pydantic schemas (ErrorQuery, Feedback, etc.)
+│   └── schemas.py               # Pydantic schemas
 │
 ├── utils/                       # Utility functions
 │   └── helpers.py               # ID generation, text helpers
 │
-├── knowledge_base/              # Seed data & ingested documents
-│   └── seed.py                  # 12 common error-solution pairs
+├── knowledge_base/              # Seed data
+│   └── seed.py                  # 12 error-solution pairs
 │
-├── scripts/                     # Maintenance & automation
-│   ├── seed_kb.py               # CLI to populate ChromaDB
-│   └── ...
+├── scripts/                     # Maintenance scripts
+│   └── seed_kb.py               # CLI to populate ChromaDB
 │
-├── assets/                      # Icons, images, static resources
-├── requirements.txt             # Python dependencies
+├── assets/                      # Icons, images
+│   └── icon.png                 # Application icon
+│
+├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
@@ -202,9 +258,15 @@ flowchart TB
 | ✅ | Local RAG pipeline with ChromaDB |
 | ✅ | Streaming response UI |
 | ✅ | Multi-Armed Bandit reinforcement learning |
+| ✅ | Glass UI with NavigationRail + drag-and-drop |
+| ✅ | Dark / Light theme toggle |
+| ✅ | Markdown rendering with syntax highlighting |
+| ✅ | Custom AI providers (Ollama / OpenAI compatible) |
+| ✅ | Provider config UI (LLM, VLM, Chat, Code, Embedding) |
 | 🔄 | Multi-image / multi-error support |
 | 🔄 | Side-by-side diff view (before / after fix) |
 | 🔄 | Plugin system for custom knowledge sources |
+| 🔄 | History persistence with search |
 | 🔄 | One-click installer (Windows / macOS / Linux) |
 
 ---

@@ -207,3 +207,15 @@ assets/*.jpg
 
 # Logs
 *.log
+
+# Database files
+db/debugly.db
+db/debugly.db-shm
+db/debugly.db-wal
+db/providers.json
+
+# User projects
+projects/
+
+# Misc
+0.24.0

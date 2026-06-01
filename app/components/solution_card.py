@@ -1,7 +1,10 @@
 import flet as ft
 
+from app.theme import border_all, LIGHT_BORDER, DARK_BORDER
 
-def solution_card(title: str, details: list[dict]) -> ft.Container:
+
+def solution_card(title: str, details: list[dict], is_dark: bool = False) -> ft.Container:
+    border_color = DARK_BORDER if is_dark else LIGHT_BORDER
     items = []
     for d in details:
         items.append(ft.ListTile(
@@ -16,7 +19,7 @@ def solution_card(title: str, details: list[dict]) -> ft.Container:
             *items,
         ]),
         padding=15,
-        border=ft.border.all(1, ft.Colors.GREY_300),
+        border=border_all(1, border_color),
         border_radius=12,
         width=280,
         visible=bool(details),
