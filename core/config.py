@@ -4,10 +4,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-DEFAULT_VLM_MODEL = "llava:7b"
-DEFAULT_LLM_MODEL = "qwen3-coder:30b"
-DEFAULT_CHAT_MODEL = "qwen3-coder:30b"
-DEFAULT_CODE_MODEL = "qwen3-coder:30b"
+DEFAULT_VLM_MODEL = "glm-ocr:latest"
+DEFAULT_LLM_MODEL = "gpt-oss:latest"
+DEFAULT_CHAT_MODEL = "gpt-oss:latest"
+DEFAULT_CODE_MODEL = "gpt-oss:latest"
 DEFAULT_EMBEDDING_MODEL = "mxbai-embed-large:latest"
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
