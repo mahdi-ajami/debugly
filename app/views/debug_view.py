@@ -1,3 +1,5 @@
+import asyncio
+
 import flet as ft
 
 from app.theme import (
@@ -17,8 +19,7 @@ from app.theme import (
 from app.components.chat_bubble import chat_bubble
 from app.components.drag_drop_zone import drag_drop_zone
 from app.components.diff_view import parse_diffs_from_text, diff_view
-from app.components.feedback_bar import FeedbackBar
-from app.components.step_view import typing_indicator, step_view
+from app.components.step_view import typing_indicator, step_view, image_preview_card
 
 _FILE_ICONS = {
     "py": ft.Icons.CODE, "js": ft.Icons.JAVASCRIPT, "ts": ft.Icons.DATA_OBJECT,
@@ -148,14 +149,11 @@ class DebugView:
             border_radius=6,
             bgcolor=DARK_BG_SURFACE if is_dark else LIGHT_BG_SURFACE,
         )
-        self.feedback_bar = FeedbackBar(
-            on_thumbs_up=lambda: self._handle_feedback(1),
-            on_thumbs_down=lambda: self._handle_feedback(0),
-        )
 
         self._token_label = ft.Text("0 tok", size=10, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._token_bar = ft.Container(content=self._token_label, padding=padding_symmetric(horizontal=6))
 
+        # Input field with Ctrl+Enter detection
         self.error_input = ft.TextField(
             hint_text="Type error or /command...",
             expand=1,
@@ -167,7 +165,7 @@ class DebugView:
             border=border_all(1, DARK_BORDER if is_dark else LIGHT_BORDER),
             bgcolor=DARK_BG_SURFACE if is_dark else LIGHT_BG_SURFACE,
             on_change=self._on_input_change,
-            on_submit=self._on_send,
+            on_key=self._on_key_event,
         )
 
         self.attach_btn = ft.IconButton(
@@ -181,7 +179,7 @@ class DebugView:
         self.send_btn = ft.IconButton(
             icon=ft.Icons.SEND_ROUNDED,
             icon_size=22,
-            tooltip="Send (Enter)",
+            tooltip="Send (Ctrl+Enter)",
             style=ft.ButtonStyle(color=self.accent),
             on_click=self._on_send,
         )
@@ -232,8 +230,6 @@ class DebugView:
         text = e.control.value or ""
         rtl = is_rtl_text(text)
         self.error_input.text_align = ft.TextAlign.RIGHT if rtl else ft.TextAlign.LEFT
-        if text.startswith("/"):
-            self._show_mcp_help(text)
         chars = len(text)
         tokens = self._estimate_tokens(text)
         pct = tokens / 4000
@@ -247,8 +243,9 @@ class DebugView:
         self._token_label.color = color
         self._token_label.update()
 
-    def _show_mcp_help(self, prefix: str = ""):
-        pass
+    def _on_key_event(self, e: ft.KeyboardEvent):
+        if e.ctrl and e.key == "Enter":
+            self._on_send(None)
 
     async def _on_attach(self, e):
         fp = ft.FilePicker()
@@ -342,12 +339,12 @@ class DebugView:
         except RuntimeError:
             pass
 
-    def _add_bubble(self, text, is_user=False, is_markdown=False, timestamp="", attachments=None):
-        b = chat_bubble(text, is_user=is_user, is_markdown=is_markdown, is_dark=self.is_dark, timestamp=timestamp, attachments=attachments)
+    def _add_bubble(self, text, is_user=False, is_markdown=False, timestamp="", attachments=None, steps=None):
+        b = chat_bubble(text, is_user=is_user, is_markdown=is_markdown, is_dark=self.is_dark, timestamp=timestamp, attachments=attachments, steps=steps)
         if self._has_welcome:
             self.chat_log.controls.clear()
             self._has_welcome = False
-        self.chat_log.controls.append(b)
+        self.chat_log.controls.append(ft.Container(content=b, margin=ft.Margin(left=0, top=0, right=0, bottom=0)))
         try:
             self.chat_log.update()
         except RuntimeError:
@@ -424,12 +421,14 @@ class DebugView:
 
     def _process_message(self, text: str, images: list[str], files: list[str]):
         self._processing = True
+        self._stop_requested = False
         self._update_status("processing")
         self._sidebar_step_list.controls.clear()
         self._sidebar_file_list.controls.clear()
         self._sidebar_files.clear()
         self._diff_cards.clear()
 
+        # Build attachment chips for user bubble
         attachments = []
         for img in images:
             fname = img.split("\\")[-1]
@@ -452,6 +451,37 @@ class DebugView:
 
         history_list = [{"role": m.role, "content": m.content} for m in (self._session.messages if self._session else [])]
 
+        # --- 3-Stage Pipeline ---
+        steps_col = ft.Column(spacing=4)
+        typing_ind = typing_indicator(self.is_dark)
+        md = ft.Markdown(
+            value="",
+            extension_set=ft.MarkdownExtensionSet.GITHUB_FLAVORED,
+            code_theme="monokai-sublime" if self.is_dark else "github",
+            selectable=True,
+        )
+        bubble_container = ft.Container(
+            content=ft.Column([md], spacing=4),
+            padding=padding_symmetric(horizontal=14, vertical=10),
+            bgcolor=DARK_BG_SURFACE if self.is_dark else LIGHT_BG_SURFACE,
+            border_radius=ft.BorderRadius(top_left=4, top_right=16, bottom_left=16, bottom_right=16),
+            border=border_all(0.5, DARK_BORDER if self.is_dark else LIGHT_BORDER),
+        )
+        assistant_content = ft.Column([steps_col, typing_ind, bubble_container], spacing=6)
+        row_wrapper = ft.Container(content=assistant_content, margin=ft.Margin(left=26, top=0, right=0, bottom=0))
+
+        if self._has_welcome:
+            self.chat_log.controls.clear()
+            self._has_welcome = False
+        self.chat_log.controls.append(row_wrapper)
+        self.page.update()
+
+        # Stage 1: Warmup
+        warmup_step = step_view("warmup", "Initializing agents...", is_dark=self.is_dark)
+        steps_col.controls.append(warmup_step)
+        steps_col.update()
+        self._add_sidebar_step("think", "Warming up agents...")
+
         query = text
         if not query and images:
             from PIL import Image
@@ -463,56 +493,47 @@ class DebugView:
             except Exception:
                 query = "Analyze the attached screenshot"
 
+        # Stage 2: VLM extraction (if we had images and no text)
+        if images and not text:
+            vlm_step = step_view("image", "Processing image with VLM...", is_dark=self.is_dark)
+            steps_col.controls.append(vlm_step)
+            steps_col.update()
+
+        # Stage 3: Solver generating
         event_stream, state = self.agent.solve(query, stream=True, history=history_list)
         self._current_arm = state.arm_selected
         self.last_state = state
-
-        steps_col = ft.Column(spacing=0)
-        placeholder = ft.Text("", selectable=True, size=14, color=self.text_p)
-        bubble = ft.Container(
-            content=placeholder,
-            padding=padding_symmetric(horizontal=14, vertical=10),
-            bgcolor=DARK_BG_SURFACE if self.is_dark else LIGHT_BG_SURFACE,
-            border_radius=ft.BorderRadius(top_left=16, top_right=16, bottom_left=16, bottom_right=16),
-            border=border_all(0.5, DARK_BORDER if self.is_dark else LIGHT_BORDER),
-            width=540,
-        )
-
-        typing_ind = typing_indicator(self.is_dark)
-        assistant_row = ft.Column([
-            steps_col,
-            typing_ind,
-            ft.Row([bubble], alignment=ft.MainAxisAlignment.START),
-        ], spacing=4)
-        self.chat_log.controls.append(assistant_row)
-        self.page.update()
 
         full_text = ""
         for event in event_stream:
             if self._stop_requested:
                 break
-            if event.type in ("think", "retrieve", "tool"):
+            if event.type in ("think", "retrieve", "tool", "warmup", "wait"):
                 sv = step_view(event.type, event.content, event.metadata, is_dark=self.is_dark)
                 steps_col.controls.append(sv)
                 steps_col.update()
                 self._add_sidebar_step(event.type, event.content)
             elif event.type == "error":
-                placeholder.value = event.content
-                placeholder.color = ft.Colors.RED_400 if self.is_dark else ft.Colors.RED_700
-                placeholder.update()
+                sv = step_view("error", event.content, event.metadata, is_dark=self.is_dark)
+                steps_col.controls.append(sv)
+                steps_col.update()
+                md.value = event.content
+                md.update()
             elif event.type == "generate":
-                if typing_ind in assistant_row.controls:
-                    assistant_row.controls.remove(typing_ind)
+                if typing_ind in assistant_content.controls:
+                    assistant_content.controls.remove(typing_ind)
+                    assistant_content.update()
                 if event.metadata.get("partial"):
                     full_text += event.content
-                    placeholder.value = full_text
-                    placeholder.update()
+                    md.value = full_text
+                    md.update()
 
         if full_text:
-            placeholder.value = full_text
-            placeholder.update()
-        self.feedback_bar.visible = True
-        self.feedback_bar.update()
+            md.value = full_text
+            md.update()
+        if typing_ind in assistant_content.controls:
+            assistant_content.controls.remove(typing_ind)
+            assistant_content.update()
         self._show_sources(state.retrieved_docs, web_results=state.web_results)
 
         parsed = parse_diffs_from_text(full_text)
@@ -613,31 +634,16 @@ class DebugView:
         if self._status_bar:
             self._status_bar.set_mode(mode, arm)
 
-    def _handle_feedback(self, rating: int):
-        if self._current_arm is not None:
-            self.agent.handle_feedback(self._current_arm, rating)
-        self.feedback_bar.visible = False
-        self.feedback_bar.update()
-        try:
-            self.page.show_dialog(
-                ft.SnackBar(
-                    ft.Row([
-                        ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN_400, size=18),
-                        ft.Text("Thanks for your feedback!", size=13),
-                    ]),
-                    open=True, duration=2000,
-                    bgcolor=DARK_BG_SURFACE if self.is_dark else LIGHT_BG_SURFACE,
-                )
-            )
-        except Exception:
-            pass
-
     def _on_drop_files_changed(self, paths):
         self._attach_chips.controls.clear()
         for p in paths:
             fname = p.split("\\")[-1]
             chip = _file_attachment_chip(fname, self.is_dark)
             self._attach_chips.controls.append(chip)
+            # Add image preview card for images
+            if _get_ext(fname) in {"png", "jpg", "jpeg", "bmp", "webp"}:
+                preview = image_preview_card(p, self.is_dark)
+                self._attach_chips.controls.append(preview)
         self._attachment_bar.visible = bool(paths)
         self._attachment_bar.update()
 
@@ -670,8 +676,8 @@ class DebugView:
             ),
         ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
-        self.feedback_bar.visible = False
-        chat_area = ft.Column([self.chat_log, self.feedback_bar], expand=2, spacing=2)
+        # Build main chat area
+        chat_area = ft.Column([self.chat_log], expand=2, spacing=2)
         if not self.chat_log.controls and not self._has_welcome:
             self._has_welcome = True
             self.chat_log.controls.append(
@@ -681,7 +687,7 @@ class DebugView:
                         ft.Container(height=6),
                         ft.Text("Ready to Debug", size=16, weight=ft.FontWeight.W_600, color=self.text_p),
                         ft.Text("Drop a screenshot or type an error message below", size=11, color=self.text_s),
-                        ft.Text("Type /help for commands", size=10, color=self.text_s),
+                        ft.Text("Type /help for commands  •  Ctrl+Enter to send", size=10, color=self.text_s),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
                     expand=1,
                 )
