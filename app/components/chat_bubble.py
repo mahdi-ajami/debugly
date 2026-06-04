@@ -60,8 +60,12 @@ def chat_bubble(
     children = [content]
 
     if attachments:
-        for att in attachments:
-            children.append(ft.Text(att, size=10, color=icon_color, italic=True))
+        children.append(
+            ft.Container(
+                content=ft.Column([*attachments], spacing=4),
+                padding=padding_only(top=6),
+            )
+        )
 
     return ft.Row([
         ft.Container(
