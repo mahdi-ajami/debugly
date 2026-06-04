@@ -50,7 +50,6 @@ class DetailedFooter:
         self._chroma_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._session_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._ram_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
-        self._sessions_count = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._os_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._version_text = ft.Text("v1.0.0", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._notif_icon = ft.Icon(ft.Icons.NOTIFICATIONS_OUTLINED, size=14, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
@@ -75,79 +74,66 @@ class DetailedFooter:
 
         sep = lambda: ft.Container(width=1, height=18, bgcolor=c.border)
 
-        row1 = ft.Row([
-            ft.Row([self._dot, self._mode_text], spacing=6),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.MEMORY, size=13, color=c.sec),
-                self._llm_text,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.IMAGE, size=13, color=c.sec),
-                self._vlm_text,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.SHORT_TEXT, size=13, color=c.sec),
-                self._embed_text,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.BOLT, size=13, color=c.sec),
-                ft.Text("T:", size=11, color=c.muted),
-                self._token_text,
-                ft.Text("@", size=11, color=c.muted),
-                self._speed_text,
-            ], spacing=2),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.CLOUD, size=13, color=c.sec),
-                self._provider_text,
-            ], spacing=3),
-            sep(),
-            self._arm_badge,
-        ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-
-        row2 = ft.Row([
-            ft.Row([
-                ft.Icon(ft.Icons.STORAGE, size=13, color=c.sec),
-                self._chroma_text,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.CHAT, size=13, color=c.sec),
-                self._session_text,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.MEMORY, size=13, color=c.sec),
-                self._ram_text,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.FOLDER_OUTLINED, size=13, color=c.sec),
-                self._sessions_count,
-            ], spacing=3),
-            sep(),
-            ft.Row([
-                ft.Icon(ft.Icons.COMPUTER, size=13, color=c.sec),
-                self._os_text,
-            ], spacing=3),
-            ft.Container(expand=1),
-            self._version_text,
-            sep(),
-            self._notif_icon,
-        ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.CENTER)
-
         return ft.Container(
-            content=ft.Column([
-                row1,
-                ft.Container(height=2),
-                row2,
-            ], spacing=0),
+            content=ft.Row([
+                ft.Row([self._dot, self._mode_text], spacing=6),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.MEMORY, size=13, color=c.sec),
+                    self._llm_text,
+                ], spacing=3),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.IMAGE, size=13, color=c.sec),
+                    self._vlm_text,
+                ], spacing=3),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.SHORT_TEXT, size=13, color=c.sec),
+                    self._embed_text,
+                ], spacing=3),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.STORAGE, size=13, color=c.sec),
+                    self._chroma_text,
+                ], spacing=3),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.CHAT, size=13, color=c.sec),
+                    self._session_text,
+                ], spacing=3),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.MEMORY, size=12, color=c.sec),
+                    self._ram_text,
+                ], spacing=3),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.BOLT, size=13, color=c.sec),
+                    ft.Text("T:", size=11, color=c.muted),
+                    self._token_text,
+                    ft.Text("@", size=11, color=c.muted),
+                    self._speed_text,
+                ], spacing=2),
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.CLOUD, size=13, color=c.sec),
+                    self._provider_text,
+                ], spacing=3),
+                sep(),
+                self._arm_badge,
+                ft.Container(expand=1),
+                self._version_text,
+                sep(),
+                ft.Row([
+                    ft.Icon(ft.Icons.COMPUTER, size=12, color=c.muted),
+                    self._os_text,
+                ], spacing=3),
+                sep(),
+                self._notif_icon,
+            ], spacing=5, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             height=FOOTER_HEIGHT,
-            padding=padding_symmetric(horizontal=16, vertical=6),
+            padding=padding_symmetric(horizontal=14, vertical=4),
             bgcolor=c.bg_surface,
             border=border_all(0.5, c.border),
         )
@@ -195,7 +181,6 @@ class DetailedFooter:
         if now - self._last_db_check > 30:
             self._last_db_check = now
             self._update_chroma_count()
-            self._update_session_count()
         try:
             self._container.update()
         except RuntimeError:
@@ -272,16 +257,6 @@ class DetailedFooter:
                 self._chroma_text.value = f"Chroma: {count}"
             except Exception:
                 pass
-
-    def _update_session_count(self):
-        pass
-
-    def set_session_count(self, count: int):
-        self._sessions_count.value = f"Sessions: {count}"
-        try:
-            self._sessions_count.update()
-        except RuntimeError:
-            pass
 
     def set_os_info(self, info: str):
         self._os_text.value = info

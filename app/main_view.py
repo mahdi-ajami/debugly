@@ -86,7 +86,6 @@ class MainView:
         c = self._cp()
         self._footer = DetailedFooter(agent=self.agent, page=page, is_dark=self._is_dark)
         self._footer.set_os_info(self.agent.get_os_info())
-        self._footer.set_session_count(len(self.project.list_sessions()) if self.project else 0)
         self.debug_view = DebugView(page, self.agent, is_dark=self._is_dark, on_new_session=self._on_new_session, status_bar=self._footer)
         self._build_side_panel()
         self.nav_rail = self._build_nav_rail()
@@ -335,7 +334,6 @@ class MainView:
         self.debug_view = DebugView(self.page, self.agent, is_dark=self._is_dark, on_new_session=self._on_new_session, status_bar=self._footer)
         self._build_side_panel()
         self._toolbar.set_project_name(project.name)
-        self._footer.set_session_count(len(project.list_sessions()))
         self._navigate(self._nav_index)
         if self.page:
             self.page.update()
