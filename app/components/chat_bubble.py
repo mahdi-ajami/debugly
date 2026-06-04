@@ -7,7 +7,7 @@ from app.theme import (
     DARK_BORDER, LIGHT_BORDER,
     DARK_TEXT_MUTED, LIGHT_TEXT_MUTED,
     DARK_TEXT_PRIMARY, LIGHT_TEXT_PRIMARY,
-    border_all, padding_symmetric, is_rtl_text,
+    border_all, padding_symmetric, padding_only, is_rtl_text,
 )
 
 
