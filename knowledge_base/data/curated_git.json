@@ -1,0 +1,286 @@
+[
+  {
+    "title": "git merge conflict resolution",
+    "tags": ["git", "merge", "conflict", "branch"],
+    "languages": ["bash"],
+    "error_patterns": ["Automatic merge failed", "merge conflict", "CONFLICT", "Merge conflict in"],
+    "severity": "high",
+    "solution_steps": [
+      "1. `git status` to see conflicted files",
+      "2. Open files and search for `<<<<<<<`, `=======`, `>>>>>>>` markers",
+      "3. Edit to keep the correct changes between markers",
+      "4. Remove the conflict markers after resolving",
+      "5. `git add <file>` for each resolved file",
+      "6. `git commit` to complete the merge",
+      "7. Use `git mergetool` for GUI-based resolution"
+    ],
+    "code_example": "git merge feature-branch\n# Resolve conflicts\nnano src/file.js  # Edit to remove markers\ngit add src/file.js\ngit commit -m \"Resolve merge conflict\"\n# Alternative: abort merge\ngit merge --abort",
+    "related_topics": ["merge", "conflicts", "branching", "mergetool"],
+    "source": "curated"
+  },
+  {
+    "title": "git detached HEAD state recovery",
+    "tags": ["git", "detached HEAD", "checkout", "branch"],
+    "languages": ["bash"],
+    "error_patterns": ["detached HEAD", "You are in 'detached HEAD' state", "HEAD detached at"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Create a branch at current position: `git branch temp-branch`",
+      "2. Switch to the new branch: `git checkout temp-branch`",
+      "3. Merge or rebase to integrate with main branch",
+      "4. If you just want to go back: `git checkout main`",
+      "5. If you made commits you want to keep: `git log` to find commit hash, then `git checkout -b new-branch <hash>`"
+    ],
+    "code_example": "# Save work in detached HEAD\ngit checkout -b my-temp-branch\n# Merge into main\ngit checkout main\ngit merge my-temp-branch\n# Or simply return to a branch\ngit checkout main",
+    "related_topics": ["detached HEAD", "branches", "checkout", "recovery"],
+    "source": "curated"
+  },
+  {
+    "title": "git push rejected (non-fast-forward)",
+    "tags": ["git", "push", "rejected", "non-fast-forward", "remote"],
+    "languages": ["bash"],
+    "error_patterns": ["rejected", "non-fast-forward", "failed to push", "Updates were rejected"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Pull latest changes first: `git pull origin main`",
+      "2. Resolve any merge conflicts",
+      "3. Try push again: `git push origin main`",
+      "4. Use `--force-with-lease` (safer than --force) if you need to overwrite remote",
+      "5. Use `git fetch origin && git rebase origin/main` for cleaner history",
+      "6. Never `--force` push to shared branches without coordination"
+    ],
+    "code_example": "git pull origin main --rebase\n# Resolve conflicts if any\ngit push origin main\n# Force with lease (safer)\ngit push --force-with-lease origin main",
+    "related_topics": ["push", "rebase", "pull", "force push"],
+    "source": "curated"
+  },
+  {
+    "title": "git: accidentally committed to wrong branch",
+    "tags": ["git", "commit", "branch", "cherry-pick", "reset"],
+    "languages": ["bash"],
+    "error_patterns": ["committed to wrong branch", "undo commit", "move commit"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Get commit hash: `git log --oneline -1`",
+      "2. Switch to correct branch: `git checkout correct-branch`",
+      "3. Cherry-pick the commit: `git cherry-pick <hash>`",
+      "4. Go back to wrong branch: `git checkout wrong-branch`",
+      "5. Reset: `git reset HEAD~1` (soft reset keeps changes staged)",
+      "6. Use `git reset --hard HEAD~1` to discard (only if unpushed)"
+    ],
+    "code_example": "git log --oneline -1\n# a1b2c3d My commit\ngit checkout target-branch\ngit cherry-pick a1b2c3d\ngit checkout wrong-branch\ngit reset HEAD~1\ngit push --force-with-lease origin wrong-branch  # if already pushed",
+    "related_topics": ["cherry-pick", "reset", "branching", "commit management"],
+    "source": "curated"
+  },
+  {
+    "title": "git: untracked files preventing branch switch",
+    "tags": ["git", "untracked", "stash", "checkout", "branch"],
+    "languages": ["bash"],
+    "error_patterns": ["The following untracked working tree files would be overwritten by checkout", "would be overwritten", "checkout would overwrite"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Add and stash: `git add . && git stash`",
+      "2. Switch branches: `git checkout other-branch`",
+      "3. Restore: `git stash pop` on the new branch",
+      "4. Delete untracked files: `git clean -fd` (careful — irreversible)",
+      "5. Move files manually to a backup location"
+    ],
+    "code_example": "git add . && git stash -u  # -u includes untracked\ngit checkout other-branch\ngit stash pop\n# Or force checkout (discards changes)\ngit checkout -f other-branch",
+    "related_topics": ["stash", "checkout", "untracked files", "git clean"],
+    "source": "curated"
+  },
+  {
+    "title": "git: reset vs revert vs restore",
+    "tags": ["git", "reset", "revert", "restore", "undo"],
+    "languages": ["bash"],
+    "error_patterns": ["undo commit", "revert changes", "reset vs revert", "remove commit from history"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `git reset --soft HEAD~1` — undo commit, keep changes staged",
+      "2. `git reset --mixed HEAD~1` — undo commit, keep changes unstaged",
+      "3. `git reset --hard HEAD~1` — discard commit AND changes (dangerous)",
+      "4. `git revert <hash>` — create new commit that undoes changes (safe for shared history)",
+      "5. `git restore <file>` — undo unstaged changes in working directory",
+      "6. `git restore --staged <file>` — unstage file"
+    ],
+    "code_example": "# Already pushed (safe):\ngit revert HEAD  # Creates new commit undoing last\ngit revert a1b2c3d\n\n# Not pushed:\ngit reset --soft HEAD~1  # Keep changes staged\ngit reset --hard HEAD~1  # Completely remove commits",
+    "related_topics": ["reset", "revert", "restore", "undo", "history"],
+    "source": "curated"
+  },
+  {
+    "title": "git: rebase conflicts",
+    "tags": ["git", "rebase", "conflicts", "interactive rebase"],
+    "languages": ["bash"],
+    "error_patterns": ["rebase conflict", "could not apply", "rebase in progress", "fix conflicts and then run"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Resolve conflicts in each file as they appear",
+      "2. `git add <resolved-file>` after fixing",
+      "3. `git rebase --continue` to move to next commit",
+      "4. Edit commit message if prompted",
+      "5. `git rebase --abort` to cancel the entire rebase",
+      "6. `git rebase --skip` to skip a problematic commit",
+      "7. Use `git mergetool` for visual conflict resolution"
+    ],
+    "code_example": "git rebase main\n# Conflict in file.txt\nnano file.txt  # Resolve\ngit add file.txt\ngit rebase --continue\n# Or abort\ngit rebase --abort",
+    "related_topics": ["rebase", "conflicts", "interactive rebase", "history rewriting"],
+    "source": "curated"
+  },
+  {
+    "title": "git: stash pop conflict",
+    "tags": ["git", "stash", "conflict", "pop"],
+    "languages": ["bash"],
+    "error_patterns": ["Auto-merging", "CONFLICT", "stash pop conflict", "After resolving, commit"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Resolve conflicts as usual (edit conflicted files)",
+      "2. `git add <resolved-file>` for each",
+      "3. `git stash drop` to remove stash after resolution",
+      "4. `git stash apply` (instead of pop) to keep stash for re-try",
+      "5. Check `git stash list` to see all stashes"
+    ],
+    "code_example": "git stash pop\n# Conflicts occur\nnano file.txt  # Resolve\ngit add file.txt\ngit stash drop\n# Alternative: apply then drop\ngit stash apply  # Resolve later\ngit stash drop",
+    "related_topics": ["stash", "conflicts", "apply", "pop"],
+    "source": "curated"
+  },
+  {
+    "title": "git: amend and force push",
+    "tags": ["git", "amend", "force push", "commit message", "history"],
+    "languages": ["bash"],
+    "error_patterns": ["amend", "commit --amend", "force push", "rewriting history"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `git commit --amend -m \"New message\"` (unpushed only)",
+      "2. `git commit --amend --no-edit` (keep message, add staged changes)",
+      "3. `git push --force-with-lease origin branch` (after amend on pushed branch)",
+      "4. Warn collaborators — force push rewrites history",
+      "5. Never force push to shared branches (main, develop)"
+    ],
+    "code_example": "git add forgotten-file.js\ngit commit --amend --no-edit\n# If already pushed\ngit push --force-with-lease origin my-feature\n# Change commit message only\ngit commit --amend -m \"New message\"",
+    "related_topics": ["amend", "force push", "commit messages", "history rewriting"],
+    "source": "curated"
+  },
+  {
+    "title": "git: detached head from checkout of tag/commit",
+    "tags": ["git", "detached HEAD", "tag", "checkout", "version"],
+    "languages": ["bash"],
+    "error_patterns": ["detached at tag", "detached at v1\\.0", "need to create a branch for commits"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. If you want to make changes: `git checkout -b new-branch-name`",
+      "2. If you just want to look: `git checkout main` or original branch",
+      "3. Tags are read-only pointers — don't commit on them",
+      "4. If you already committed in detached HEAD: create branch to save commits"
+    ],
+    "code_example": "# View tag but not modify\ngit checkout v1.0\n# Okay, done looking, go back\ngit checkout main\n\n# Want to modify:\ngit checkout -b hotfix-v1.0 v1.0\n# Now make changes, commit, etc.",
+    "related_topics": ["detached HEAD", "tags", "branches", "checkout"],
+    "source": "curated"
+  },
+  {
+    "title": "git: large file / binary diff issues",
+    "tags": ["git", "large files", "binary", "LFS", "performance"],
+    "languages": ["bash"],
+    "error_patterns": ["large file", "binary file", "diff too large", "file size exceeds", "LFS"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Add large file extensions to `.gitignore`",
+      "2. Use `git lfs` (Large File Storage) for binaries",
+      "3. Track: `git lfs track \"*.psd\" \"*.zip\"`",
+      "4. Ensure `.gitattributes` is committed: `git add .gitattributes`",
+      "5. Install git-lfs: `git lfs install`",
+      "6. Use `--no-renames` for large rename diffs"
+    ],
+    "code_example": "git lfs install\ngit lfs track \"*.psd\" \"*.zip\" \"*.bin\"\necho \".gitattributes\" >> .gitignore\ngit add .gitattributes",
+    "related_topics": ["LFS", "binary files", "gitignore", "performance"],
+    "source": "curated"
+  },
+  {
+    "title": "git: submodule issues",
+    "tags": ["git", "submodule", "clone", "update"],
+    "languages": ["bash"],
+    "error_patterns": ["submodule", "not cloned", "fatal: not a git repository", "submodule update"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Clone with submodules: `git clone --recurse-submodules <url>`",
+      "2. For existing clone: `git submodule update --init --recursive`",
+      "3. Update submodule to latest: `git submodule update --remote`",
+      "4. Add a submodule: `git submodule add <url> path/to/submodule`",
+      "5. Remove a submodule: deinit then rm",
+      "6. Check `.gitmodules` for configuration"
+    ],
+    "code_example": "git clone --recurse-submodules https://github.com/user/repo.git\n# Or after clone\ngit submodule update --init --recursive\n# Update all submodules\ngit submodule foreach git pull origin main",
+    "related_topics": ["submodule", "clone", "dependencies", "version management"],
+    "source": "curated"
+  },
+  {
+    "title": "git: bisect for finding regression",
+    "tags": ["git", "bisect", "debugging", "regression", "binary search"],
+    "languages": ["bash"],
+    "error_patterns": ["regression", "bisect", "find bad commit", "when did this break"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `git bisect start`",
+      "2. Mark current as bad: `git bisect bad`",
+      "3. Mark a known good commit: `git bisect good <hash>`",
+      "4. Git checks out a midpoint commit",
+      "5. Test and mark: `git bisect good` or `git bisect bad`",
+      "6. Repeat until the first bad commit is found",
+      "7. `git bisect reset` to exit"
+    ],
+    "code_example": "git bisect start\ngit bisect bad              # Current version is broken\ngit bisect good v1.0        # v1.0 was working\n# Test each midpoint:\ngit bisect good             # or bad\ngit bisect reset            # When done",
+    "related_topics": ["bisect", "debugging", "regression", "binary search"],
+    "source": "curated"
+  },
+  {
+    "title": "git: credential and authentication",
+    "tags": ["git", "auth", "credential", "token", "SSH"],
+    "languages": ["bash"],
+    "error_patterns": ["Authentication failed", "could not read Username", "fatal: could not read", "access denied", "403"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use GitHub CLI: `gh auth login`",
+      "2. Use SSH keys: `ssh-keygen -t ed25519`, add to GitHub",
+      "3. Use personal access tokens instead of passwords",
+      "4. Cache credentials: `git config --global credential.helper osxkeychain` (Mac) or `manager-core` (Windows)",
+      "5. Check remote URL: `git remote -v` (HTTPS vs SSH)",
+      "6. Update remote: `git remote set-url origin git@github.com:user/repo.git`"
+    ],
+    "code_example": "# Switch to SSH\ngit remote set-url origin git@github.com:user/repo.git\n# Cache credentials (Windows)\ngit config --global credential.helper manager-core\n# Generate SSH key\nssh-keygen -t ed25519 -C \"email@example.com\"\ncat ~/.ssh/id_ed25519.pub  # Add to GitHub",
+    "related_topics": ["SSH", "tokens", "authentication", "GitHub"],
+    "source": "curated"
+  },
+  {
+    "title": "git: squashing multiple commits",
+    "tags": ["git", "squash", "rebase", "interactive", "clean history"],
+    "languages": ["bash"],
+    "error_patterns": ["squash commits", "too many commits", "combine commits", "interactive rebase"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `git rebase -i HEAD~<N>` where N is the number of commits to combine",
+      "2. Change `pick` to `squash` (or `s`) for all but the first commit",
+      "3. Save and exit — Git will combine them",
+      "4. Edit the combined commit message",
+      "5. `git push --force-with-lease` if already pushed",
+      "6. For main branch merges: use `--squash` flag"
+    ],
+    "code_example": "git rebase -i HEAD~3\n# Change:\n# pick a1b2c3d First commit\n# squash b2c3d4e Second commit\n# squash c3d4e5f Third commit\n# Save and edit commit message\ngit push --force-with-lease origin feature",
+    "related_topics": ["rebase", "squash", "interactive rebase", "history"],
+    "source": "curated"
+  },
+  {
+    "title": "git: case-sensitive filename issues",
+    "tags": ["git", "case sensitivity", "filesystem", "rename"],
+    "languages": ["bash"],
+    "error_patterns": ["file renamed but case only", "case sensitive git", "git mv", "renaming file"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `git mv -f oldname Newname` for case-only renames",
+      "2. Enable: `git config core.ignorecase false`",
+      "3. On Windows/Mac, filesystem is case-insensitive by default",
+      "4. For two-step rename: `git mv oldname temp && git mv temp Newname`",
+      "5. Use `--no-index` for case-sensitive diff"
+    ],
+    "code_example": "git mv Newfile.txt newfile.txt  # Won't work on Windows\n# Instead:\ngit mv Newfile.txt temp_new.txt\ngit mv temp_new.txt newfile.txt\n# Or:\ngit config core.ignorecase false  # Be careful on Windows",
+    "related_topics": ["case sensitivity", "git mv", "rename", "filesystem"],
+    "source": "curated"
+  }
+]

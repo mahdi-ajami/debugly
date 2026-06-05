@@ -1,0 +1,551 @@
+[
+  {
+    "title": "TypeError: Cannot read properties of undefined",
+    "tags": ["javascript", "undefined", "null", "property access"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["Cannot read properties of undefined", "Cannot read property '.*' of undefined", "Cannot read properties of null"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use optional chaining: `obj?.prop?.innerProp`",
+      "2. Use nullish coalescing: `const val = obj?.prop ?? 'default'`",
+      "3. Add null/undefined checks: `if (obj?.prop)`",
+      "4. Initialize variables before use",
+      "5. Check API response shape matches expected structure",
+      "6. Use TypeScript for compile-time null safety"
+    ],
+    "code_example": "// Optional chaining\nconst name = user?.profile?.name ?? 'Anonymous';\n// Guard check\nif (arr && arr.length > 0) { /* safe */ }",
+    "related_topics": ["optional chaining", "nullish coalescing", "TypeScript", "defensive programming"],
+    "source": "curated"
+  },
+  {
+    "title": "React: setState is asynchronous",
+    "tags": ["javascript", "react", "state", "async"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["setState is not working", "state is stale", "this\\.state is outdated", "React state batching"],
+    "severity": "high",
+    "solution_steps": [
+      "1. `setState` is async; don't read `this.state` immediately after setState",
+      "2. Use functional updater: `setCount(prev => prev + 1)`",
+      "3. Use `useEffect` to react to state changes",
+      "4. Multiple setState calls are batched in React 18",
+      "5. For class components: pass callback as second arg to `setState`"
+    ],
+    "code_example": "// Functional updater\nconst [count, setCount] = useState(0);\nsetCount(prev => prev + 1);\nsetCount(prev => prev + 1);  // Both applied",
+    "related_topics": ["React", "useState", "setState", "batching"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: async/await try/catch pattern",
+    "tags": ["javascript", "async", "await", "promise", "error handling"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["Unhandled Promise rejection", "Uncaught (in promise)", "await is not working", "async error not caught"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Wrap await calls in try/catch blocks",
+      "2. Use a wrapper function for consistent error handling",
+      "3. Add .catch() to promises if not using await",
+      "4. Use Promise.allSettled() instead of Promise.all() for fault tolerance",
+      "5. Add global error handlers: `window.onunhandledrejection`"
+    ],
+    "code_example": "async function fetchData() {\n  try {\n    const res = await fetch(url);\n    return await res.json();\n  } catch (err) {\n    console.error('Fetch failed:', err);\n    return null;\n  }\n}",
+    "related_topics": ["async/await", "promises", "error handling", "Promise.allSettled"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: module.exports vs exports confusion",
+    "tags": ["javascript", "node", "commonjs", "module"],
+    "languages": ["javascript"],
+    "error_patterns": ["module.exports", "exports is not defined", "export is empty", "require returns empty object"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `module.exports` is the actual export object",
+      "2. `exports` is a shorthand alias for `module.exports`",
+      "3. Reassigning `exports` breaks the reference to `module.exports`",
+      "4. Use `module.exports = { ... }` for exporting an object",
+      "5. Use `exports.funcName = ...` to add properties safely"
+    ],
+    "code_example": "// CORRECT: adding properties\nexports.myFunc = () => {};\nmodule.exports.myVar = 42;\n\n// CORRECT: replacing exports\nmodule.exports = { myFunc, myVar };\n\n// WRONG: breaks reference\nexports = { myFunc, myVar };",
+    "related_topics": ["CommonJS", "ES modules", "require", "module system"],
+    "source": "curated"
+  },
+  {
+    "title": "TypeScript: strict null checks errors",
+    "tags": ["typescript", "type", "null", "strict"],
+    "languages": ["typescript"],
+    "error_patterns": ["Object is possibly 'undefined'", "Object is possibly 'null'", "TS2532", "TS2531"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Add null checks: `if (value !== null && value !== undefined)`",
+      "2. Use optional chaining: `value?.property`",
+      "3. Use non-null assertion: `value!.property` (use sparingly)",
+      "4. Use type guards: `typeof value === 'string'`",
+      "5. Use definite assignment assertion: `let x!: number`",
+      "6. Configure `strictNullChecks: true` in tsconfig.json"
+    ],
+    "code_example": "interface User { name?: string; }\nfunction greet(user: User) {\n  console.log(`Hello, ${user.name ?? 'Guest'}`);\n}",
+    "related_topics": ["TypeScript", "strict null checks", "type guards", "non-null assertion"],
+    "source": "curated"
+  },
+  {
+    "title": "React: useEffect missing dependencies",
+    "tags": ["javascript", "react", "hooks", "useEffect", "deps"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["React Hook useEffect has missing dependencies", "exhaustive-deps", "stale closure", "infinite loop"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Include all variables used inside useEffect in dependency array",
+      "2. Use `useCallback` for functions passed as deps",
+      "3. Use `useRef` for values that shouldn't trigger re-runs",
+      "4. Install `eslint-plugin-react-hooks` for automatic linting",
+      "5. Split effects if deps are unrelated",
+      "6. Consider if you actually need useEffect (derived state)"
+    ],
+    "code_example": "const [id, setId] = useState(1);\nuseEffect(() => {\n  fetch(`/api/${id}`).then(r => r.json()).then(setData);\n}, [id]);  // ✅ id is a dependency",
+    "related_topics": ["React", "useEffect", "hooks", "dependencies", "stale closure"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: 'this' context loss in callbacks",
+    "tags": ["javascript", "this", "context", "arrow function", "bind"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["cannot read property of undefined", "this is undefined", "this\\. is not a function", "this context"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use arrow functions to preserve lexical `this`",
+      "2. Use `.bind(this)` on regular functions",
+      "3. Store `this` in a variable: `const self = this;` (pre-ES6)",
+      "4. Use class property arrow functions for class methods",
+      "5. In React event handlers, use arrow functions or bind in constructor"
+    ],
+    "code_example": "class MyClass {\n  method = () => {  // arrow property\n    console.log(this);  // preserved\n  };\n  // Or bind in constructor\n  constructor() {\n    this.method = this.method.bind(this);\n  }\n}",
+    "related_topics": ["this", "arrow functions", "bind", "class", "React"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: Error-first callbacks (callback hell)",
+    "tags": ["javascript", "node", "callback", "async"],
+    "languages": ["javascript"],
+    "error_patterns": ["callback hell", "err is null", "error-first callback", "callback is not a function"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Convert callbacks to promises with `util.promisify()`",
+      "2. Use async/await instead of nested callbacks",
+      "3. If using callbacks, always check `err` parameter first",
+      "4. Use `async` libraries (caolan/async) for control flow",
+      "5. Refactor deeply nested callbacks into named functions"
+    ],
+    "code_example": "const { promisify } = require('util');\nconst readFile = promisify(require('fs').readFile);\nasync function load() {\n  const data = await readFile('file.txt', 'utf8');\n  return data;\n}",
+    "related_topics": ["callback", "promisify", "async/await", "control flow"],
+    "source": "curated"
+  },
+  {
+    "title": "React: keys in lists",
+    "tags": ["javascript", "react", "key", "lists", "reconciliation"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["Warning: Each child in a list should have a unique \"key\" prop", "key prop", "index as a key"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use stable IDs from data as keys: `key={item.id}`",
+      "2. Avoid using index as key (causes re-render issues on reorder)",
+      "3. Keys must be unique among siblings",
+      "4. Keys help React identify which items changed",
+      "5. Use `crypto.randomUUID()` or `nanoid` if no natural ID exists"
+    ],
+    "code_example": "const items = [{ id: 1, name: 'A' }, { id: 2, name: 'B' }];\nreturn items.map(item => (\n  <div key={item.id}>{item.name}</div>\n));",
+    "related_topics": ["React", "reconciliation", "lists", "keys"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: typeof vs instanceof",
+    "tags": ["javascript", "typeof", "instanceof", "type checking"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["typeof array returns object", "instanceof not working", "checking type"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Use `typeof` for primitives: string, number, boolean, undefined, symbol, bigint",
+      "2. Use `Array.isArray()` for arrays (typeof returns 'object')",
+      "3. Use `instanceof` for class instances",
+      "4. Use `Object.prototype.toString.call(obj)` for precise type",
+      "5. Use `===` to compare to null/undefined"
+    ],
+    "code_example": "typeof 'hello' === 'string';\nArray.isArray([1, 2, 3]);\nobj instanceof Date;\nObject.prototype.toString.call([]);  // '[object Array]'",
+    "related_topics": ["typeof", "instanceof", "type checking", "Array.isArray"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: process.env not loading .env file",
+    "tags": ["javascript", "node", "env", "dotenv", "configuration"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["process\\.env is empty", "dotenv not working", "environment variable undefined"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Install: `npm install dotenv`",
+      "2. Call `require('dotenv').config()` as early as possible",
+      "3. Ensure .env file is in the root directory (same as entry point)",
+      "4. Use explicit path: `dotenv.config({ path: '../.env' })`",
+      "5. .env must not have quotes around values",
+      "6. Restart the process after modifying .env"
+    ],
+    "code_example": "require('dotenv').config();\nconst apiKey = process.env.API_KEY;\nif (!apiKey) throw new Error('API_KEY not set');",
+    "related_topics": ["dotenv", "environment variables", "configuration", "process.env"],
+    "source": "curated"
+  },
+  {
+    "title": "React: unmounted component state update",
+    "tags": ["javascript", "react", "memory leak", "cleanup"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["Can't perform a React state update on an unmounted component", "Warning: Can't perform a React state update", "memory leak warning"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use a cleanup function in useEffect to cancel async operations",
+      "2. Use `AbortController` for fetch requests",
+      "3. Track mounted state with a ref: `const isMounted = useRef(true)`",
+      "4. Cancel subscriptions in useEffect cleanup",
+      "5. Use `useCallback` to prevent unnecessary re-renders"
+    ],
+    "code_example": "useEffect(() => {\n  let cancelled = false;\n  fetch(url).then(r => r.json()).then(data => {\n    if (!cancelled) setData(data);\n  });\n  return () => { cancelled = true; };\n}, [url]);",
+    "related_topics": ["React", "useEffect", "cleanup", "AbortController"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: Floating point precision in JS",
+    "tags": ["javascript", "number", "float", "precision"],
+    "languages": ["javascript"],
+    "error_patterns": ["0\\.30000000000000004", "toFixed", "Math.round", "floating point"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `toFixed(n)` for display (returns string)",
+      "2. Use `Math.round(num * 100) / 100` for 2 decimal rounding",
+      "3. Multiply to integer for calculations",
+      "4. Use libraries like `decimal.js` or `bignumber.js`",
+      "5. Be aware of IEEE 754 double precision limits"
+    ],
+    "code_example": "const price = 0.1 + 0.2;\nconsole.log(price.toFixed(2));  // '0.30'\nconst rounded = Math.round(price * 100) / 100;",
+    "related_topics": ["number", "decimal", "Math", "IEEE 754"],
+    "source": "curated"
+  },
+  {
+    "title": "TypeScript: union types and type narrowing",
+    "tags": ["typescript", "type narrowing", "union", "discriminated"],
+    "languages": ["typescript"],
+    "error_patterns": ["Type 'string | undefined' is not assignable", "Property does not exist on type", "never", "type guards"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use type guards: `typeof`, `instanceof`, `in`, custom guards",
+      "2. Use discriminated unions with `type` field",
+      "3. Use `asserts` keyword for assertion functions",
+      "4. Use `is` keyword for custom type predicates",
+      "5. Use exhaustive switch with `never` for completeness checking"
+    ],
+    "code_example": "type Shape = { kind: 'circle'; radius: number } | { kind: 'square'; side: number };\nfunction area(s: Shape): number {\n  if (s.kind === 'circle') return Math.PI * s.radius ** 2;\n  return s.side ** 2;\n}",
+    "related_topics": ["TypeScript", "type guards", "discriminated unions", "narrowing"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: npm install ENOENT / permissions",
+    "tags": ["javascript", "node", "npm", "install", "permissions"],
+    "languages": ["javascript"],
+    "error_patterns": ["ENOENT: no such file or directory", "EACCES: permission denied", "npm ERR", "EPERM"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Delete `node_modules` and `package-lock.json` and retry",
+      "2. Run: `npm cache clean --force`",
+      "3. On Windows: close VS Code/IDE and run terminal as Admin",
+      "4. Check for corporate proxy: `npm config set proxy http://proxy:port`",
+      "5. Use Node Version Manager to switch Node versions",
+      "6. Disable antivirus temporarily"
+    ],
+    "code_example": "rm -rf node_modules package-lock.json\nnpm cache clean --force\nnpm install",
+    "related_topics": ["npm", "node_modules", "permissions", "cache"],
+    "source": "curated"
+  },
+  {
+    "title": "React: useContext not re-rendering",
+    "tags": ["javascript", "react", "context", "re-render", "performance"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["useContext not updating", "context not re-rendering", "Provider value not changing"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Ensure Provider value is not a new object each render: `useMemo()`",
+      "2. Split contexts if unrelated values change together",
+      "3. Check that the consumer is inside the Provider tree",
+      "4. Use `useMemo` for context value reference stability",
+      "5. Consider using `useReducer` for complex state in context"
+    ],
+    "code_example": "const ThemeContext = React.createContext('light');\nfunction App() {\n  const theme = useMemo(() => ({ theme: 'dark', toggle }), []);\n  return (\n    <ThemeContext.Provider value={theme}>\n      <Child />\n    </ThemeContext.Provider>\n  );\n}",
+    "related_topics": ["React", "useContext", "useMemo", "re-rendering"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: spread operator shallow copy",
+    "tags": ["javascript", "spread", "copy", "immutability"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["spread operator not copying", "nested mutation", "object spread shallow"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `{...obj}` and `[...arr]` are SHALLOW copies",
+      "2. For nested objects, spread each level: `{...obj, nested: {...obj.nested}}`",
+      "3. Use `structuredClone()` for deep clone (modern browsers/Node 17+)",
+      "4. Use `JSON.parse(JSON.stringify(obj))` for simple deep clone (loses functions, Date, undefined)",
+      "5. Use `immer` or `lodash.cloneDeep` for complex immutable updates"
+    ],
+    "code_example": "const original = { a: 1, b: { c: 2 } };\nconst copy = { ...original, b: { ...original.b } };  // Deep enough\nconst deep = structuredClone(original);  // Full deep clone",
+    "related_topics": ["spread", "immutability", "deep copy", "structuredClone"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: EventEmitter memory leak",
+    "tags": ["javascript", "node", "events", "memory"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["EventEmitter memory leak detected", "MaxListenersExceededWarning", "Possible EventEmitter memory leak"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Remove listeners that are no longer needed: `.removeListener()`",
+      "2. Use `emitter.once()` instead of `emitter.on()` for one-time events",
+      "3. Increase max listeners: `emitter.setMaxListeners(20)` (temporary)",
+      "4. Use `emitter.rawListeners()` to inspect attached listeners",
+      "5. Track listener count with `emitter.listenerCount()`"
+    ],
+    "code_example": "const EventEmitter = require('events');\nconst emitter = new EventEmitter();\n// Instead of default 10\nemitter.setMaxListeners(20);\n// Listeners cleanup\nconst handler = () => {};\nemitter.on('data', handler);\nemitter.removeListener('data', handler);",
+    "related_topics": ["EventEmitter", "memory leak", "listeners", "events"],
+    "source": "curated"
+  },
+  {
+    "title": "React: useCallback and useMemo optimization",
+    "tags": ["javascript", "react", "useCallback", "useMemo", "performance"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["unnecessary re-renders", "useCallback not working", "useMemo not working", "performance optimization"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `useCallback(fn, deps)` memoizes function reference",
+      "2. `useMemo(() => value, deps)` memoizes computed value",
+      "3. Only use when passing to child components wrapped in `React.memo`",
+      "4. Don't optimize prematurely — measure first with Profiler",
+      "5. Include all dependencies or you'll get stale values"
+    ],
+    "code_example": "const handleClick = useCallback(() => {\n  setCount(prev => prev + 1);\n}, []);  // No deps needed with functional updater\n\nconst sortedList = useMemo(() => {\n  return items.sort((a, b) => a.name.localeCompare(b.name));\n}, [items]);",
+    "related_topics": ["React", "useCallback", "useMemo", "React.memo", "performance"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: closures in loops",
+    "tags": ["javascript", "closure", "loop", "var", "let"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["closure captures last value", "loop variable", "var in for loop", "setTimeout in loop"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `let` instead of `var` in for loops (block scoping)",
+      "2. Use IIFE (Immediately Invoked Function Expression): `(function(i) { ... })(i)`",
+      "3. Use `.forEach()` which creates a new scope per iteration",
+      "4. Use `for...of` which uses block scoping per iteration",
+      "5. Use `let` in the for initialization: `for (let i = 0; ...)`"
+    ],
+    "code_example": "// Wrong: prints 5, 5, 5, 5, 5\nfor (var i = 0; i < 5; i++) {\n  setTimeout(() => console.log(i), 100);\n}\n// Correct: prints 0, 1, 2, 3, 4\nfor (let i = 0; i < 5; i++) {\n  setTimeout(() => console.log(i), 100);\n}",
+    "related_topics": ["closures", "scoping", "let/var", "loops"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: stream backpressure handling",
+    "tags": ["javascript", "node", "stream", "backpressure", "pipeline"],
+    "languages": ["javascript"],
+    "error_patterns": ["backpressure", "highWaterMark", "stream push", "drain event", "memory usage high"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use `stream.pipeline()` instead of `.pipe()` for error handling",
+      "2. Listen to `drain` event before writing more data",
+      "3. Use `highWaterMark` option to control buffer size",
+      "4. Use `.write()` return value to know if buffer is full",
+      "5. Use Transform streams for processing with backpressure support"
+    ],
+    "code_example": "const { pipeline, Transform } = require('stream');\nconst fs = require('fs');\npipeline(\n  fs.createReadStream('input.txt'),\n  new Transform({\n    transform(chunk, enc, cb) {\n      this.push(chunk.toString().toUpperCase());\n      cb();\n    }\n  }),\n  fs.createWriteStream('output.txt'),\n  err => { if (err) console.error(err); }\n);",
+    "related_topics": ["streams", "backpressure", "pipeline", "Transform"],
+    "source": "curated"
+  },
+  {
+    "title": "React: controlled vs uncontrolled components",
+    "tags": ["javascript", "react", "form", "controlled", "uncontrolled"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["A component is changing an uncontrolled input to be controlled", "changing a controlled input to be uncontrolled", "defaultValue"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Controlled: state manages value, use `value` + `onChange`",
+      "2. Uncontrolled: DOM manages value, use `defaultValue` + `ref`",
+      "3. Don't switch between controlled and uncontrolled — stay consistent",
+      "4. Use `key` prop to re-mount component to reset state",
+      "5. For forms: use `react-hook-form` for complex validation"
+    ],
+    "code_example": "// Controlled\nconst [name, setName] = useState('');\n<input value={name} onChange={e => setName(e.target.value)} />\n// Uncontrolled\nconst inputRef = useRef(null);\n<input ref={inputRef} defaultValue='initial' />",
+    "related_topics": ["React", "forms", "controlled components", "uncontrolled components"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: debounce and throttle",
+    "tags": ["javascript", "debounce", "throttle", "performance", "events"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["too many requests", "input firing too fast", "scroll handler performance"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Debounce: wait until activity stops (search input, resize)",
+      "2. Throttle: limit rate (scroll, mousemove)",
+      "3. Use `lodash.debounce` or `lodash.throttle`",
+      "4. Use `AbortController` to cancel pending requests on new debounce",
+      "5. Use React `use-debounce` hook for debounced state"
+    ],
+    "code_example": "function debounce(fn, delay) {\n  let timer;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), delay);\n  };\n}\nconst handleSearch = debounce((value) => {\n  fetchResults(value);\n}, 300);",
+    "related_topics": ["debounce", "throttle", "performance", "event handlers"],
+    "source": "curated"
+  },
+  {
+    "title": "TypeScript: using `any` vs `unknown`",
+    "tags": ["typescript", "any", "unknown", "type safety"],
+    "languages": ["typescript"],
+    "error_patterns": ["any type", "unknown type", "Object is of type 'unknown'", "avoid any"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Prefer `unknown` over `any` for incoming data (API, user input)",
+      "2. `unknown` requires type narrowing before use",
+      "3. `any` disables all type checking (use as last resort)",
+      "4. Use type guards to narrow `unknown`: `typeof`, `instanceof`, custom",
+      "5. For parsing, use Zod or io-ts for runtime validation"
+    ],
+    "code_example": "function parseJSON(text: string): unknown {\n  return JSON.parse(text);\n}\nconst data = parseJSON('{\"name\":\"test\"}');\nif (typeof data === 'object' && data && 'name' in data) {\n  console.log((data as { name: string }).name);\n}",
+    "related_topics": ["TypeScript", "any", "unknown", "type safety", "Zod"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: Express middleware error handling",
+    "tags": ["javascript", "node", "express", "middleware", "error"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["express error handling", "unhandled error in middleware", "async middleware error", "next is not a function"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Error-handling middleware has 4 parameters: `(err, req, res, next)`",
+      "2. Wrap async route handlers: `asyncHandler(fn)` or use express-async-errors",
+      "3. Always call `next(err)` for async errors",
+      "4. Define error middleware last in the chain",
+      "5. Don't send headers twice — check `res.headersSent`"
+    ],
+    "code_example": "const asyncHandler = (fn) => (req, res, next) =>\n  Promise.resolve(fn(req, res, next)).catch(next);\n\napp.get('/data', asyncHandler(async (req, res) => {\n  const data = await db.query();\n  res.json(data);\n}));\n\napp.use((err, req, res, next) => {\n  console.error(err.stack);\n  res.status(500).json({ error: 'Internal Server Error' });\n});",
+    "related_topics": ["Express", "middleware", "error handling", "async/await"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: === vs ==",
+    "tags": ["javascript", "comparison", "type coercion", "equality"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["unexpected comparison", "== vs ===", "type coercion", "loose equality"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Always use `===` (strict equality) unless you explicitly need type coercion",
+      "2. `==` performs type coercion (e.g., 0 == '' is true)",
+      "3. `===` checks both value and type",
+      "4. Exception: `== null` checks both null and undefined",
+      "5. Use `Object.is()` for NaN/-0 comparisons"
+    ],
+    "code_example": "console.log('' == false);    // true (coerced)\nconsole.log('' === false);   // false\nconsole.log(null == undefined);  // true\nconsole.log(Object.is(NaN, NaN));  // true",
+    "related_topics": ["equality", "comparison", "type coercion", "Object.is"],
+    "source": "curated"
+  },
+  {
+    "title": "React: prop drilling vs composition",
+    "tags": ["javascript", "react", "prop drilling", "composition"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["prop drilling", "too many props", "passing props through many components"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use composition: pass components as children/props",
+      "2. Use Context for shared state (theme, auth, locale)",
+      "3. Extract `Compound Components` pattern",
+      "4. Use state management libraries (Zustand, Jotai, Redux) for complex state",
+      "5. Consider if the intermediate component needs the prop"
+    ],
+    "code_example": "// Composition instead of drilling\n<Page>\n  <Page.Header>\n    <Title text=\"Hello\" />\n  </Page.Header>\n  <Page.Body>\n    {children}\n  </Page.Body>\n</Page>",
+    "related_topics": ["React", "composition", "prop drilling", "Context", "compound components"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: Promise.all vs Promise.allSettled",
+    "tags": ["javascript", "promise", "error handling", "concurrent"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["Promise.all rejects", "all or nothing", "Promise.allSettled", "rejected promise"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `Promise.all` rejects fast on first rejection (all-or-nothing)",
+      "2. `Promise.allSettled` waits for all, returns { status, value/reason }",
+      "3. Use `Promise.allSettled` when you need partial results",
+      "4. Use `Promise.any` for first fulfilled promise",
+      "5. Use `Promise.race` for first settled (fulfilled or rejected)"
+    ],
+    "code_example": "const results = await Promise.allSettled([\n  fetch('/api/1'),\n  fetch('/api/2'),\n  fetch('/api/3')\n]);\nconst successes = results.filter(r => r.status === 'fulfilled').map(r => r.value);\nconst failures = results.filter(r => r.status === 'rejected').map(r => r.reason);",
+    "related_topics": ["Promise", "Promise.all", "Promise.allSettled", "concurrency"],
+    "source": "curated"
+  },
+  {
+    "title": "Node.js: module caching and singleton",
+    "tags": ["javascript", "node", "module", "cache", "singleton"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["module caching", "require returns stale data", "singleton pattern", "delete require.cache"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Node.js caches modules after first `require` (singleton by default)",
+      "2. To invalidate: `delete require.cache[require.resolve('./module')]`",
+      "3. Module-level state is shared across the process",
+      "4. Use factory functions to create fresh instances",
+      "5. For tests: use proxyquire or rewire for module mocking"
+    ],
+    "code_example": "// module.js: fresh instance per call\nmodule.exports = function createInstance() {\n  let counter = 0;\n  return { increment: () => ++counter };\n};\n// usage\nconst createCounter = require('./module');\nconst counter1 = createCounter();\nconst counter2 = createCounter();",
+    "related_topics": ["module caching", "CommonJS", "singleton", "require"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: Date object pitfalls",
+    "tags": ["javascript", "date", "time", "timezone"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["Date returns wrong date", "getMonth is off by one", "Date parsing", "timezone offset"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `getMonth()` is 0-indexed (0 = January), `getDate()` is 1-indexed",
+      "2. Use libraries: `date-fns`, `luxon`, or `dayjs`",
+      "3. For ISO strings: `new Date('2024-01-01T00:00:00Z')` (Z = UTC)",
+      "4. Use `.toISOString()` for consistent serialization",
+      "5. Use `Intl.DateTimeFormat` for locale-aware formatting"
+    ],
+    "code_example": "const d = new Date('2024-01-15T00:00:00Z');\nconsole.log(d.getMonth() + 1);  // 1 (January)\nconsole.log(d.getDate());       // 15\n// Using date-fns\nimport { format } from 'date-fns';\nconsole.log(format(d, 'yyyy-MM-dd'));",
+    "related_topics": ["Date", "timezone", "date-fns", "Intl"],
+    "source": "curated"
+  },
+  {
+    "title": "React: useReducer for complex state",
+    "tags": ["javascript", "react", "useReducer", "state management"],
+    "languages": ["javascript", "typescript", "jsx", "tsx"],
+    "error_patterns": ["useState not scaling", "complex state logic", "reducer pattern"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `useReducer` when state logic is complex or depends on previous state",
+      "2. Reducer must be pure function: (state, action) => newState",
+      "3. Dispatch actions with type and payload: `{ type: 'INCREMENT', payload: 5 }`",
+      "4. Use `useReducer` + Context for global state without Redux",
+      "5. Use `immer` with useReducer for immutable updates"
+    ],
+    "code_example": "function reducer(state, action) {\n  switch (action.type) {\n    case 'ADD_TODO':\n      return { ...state, todos: [...state.todos, action.payload] };\n    case 'TOGGLE_TODO':\n      return {\n        ...state,\n        todos: state.todos.map(t =>\n          t.id === action.payload ? { ...t, done: !t.done } : t\n        )\n      };\n    default:\n      return state;\n  }\n}",
+    "related_topics": ["React", "useReducer", "state management", "Context"],
+    "source": "curated"
+  },
+  {
+    "title": "JavaScript: module import/export named vs default",
+    "tags": ["javascript", "ES modules", "import", "export"],
+    "languages": ["javascript", "typescript"],
+    "error_patterns": ["is not a function", "export not found", "default export import", "named export"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Named exports: `export const foo = ...` → `import { foo } from './m'`",
+      "2. Default export: `export default Foo` → `import Foo from './m'`",
+      "3. Mix both: `import Foo, { bar, baz } from './m'`",
+      "4. Re-export: `export { foo } from './other'`",
+      "5. Use `as` for aliasing: `import { foo as bar } from './m'`"
+    ],
+    "code_example": "// myModule.js\nexport const named = 42;\nexport default function main() {}\n\n// app.js\nimport main, { named } from './myModule.js';",
+    "related_topics": ["ES modules", "import", "export", "CommonJS vs ESM"],
+    "source": "curated"
+  }
+]

@@ -18,6 +18,15 @@ def home_view(on_navigate, is_dark: bool = False):
     text_m = DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED
     border = DARK_BORDER if is_dark else LIGHT_BORDER
 
+    kb_count = "0"
+    try:
+        from core.database import get_conn
+        r = get_conn().execute("SELECT COUNT(1) FROM kb_entries").fetchone()
+        if r:
+            kb_count = str(r[0])
+    except Exception:
+        pass
+
     stat_card = lambda icon, label, value: surface_container(
         ft.Column([
             ft.Icon(icon, size=24, color=accent),
@@ -30,7 +39,7 @@ def home_view(on_navigate, is_dark: bool = False):
 
     stats = ft.Row([
         stat_card(ft.Icons.BUG_REPORT, "Errors Solved", "0"),
-        stat_card(ft.Icons.LIBRARY_BOOKS, "KB Entries", "12"),
+        stat_card(ft.Icons.LIBRARY_BOOKS, "KB Entries", kb_count),
         stat_card(ft.Icons.SPEED, "Accuracy", "—"),
         stat_card(ft.Icons.PSYCHOLOGY, "Active Model", "Qwen 3"),
     ], spacing=12, alignment=ft.MainAxisAlignment.CENTER)

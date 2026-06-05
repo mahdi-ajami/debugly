@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 import flet as ft
 
@@ -24,6 +25,9 @@ from app.components.drag_drop_zone import drag_drop_zone
 from app.components.diff_view import parse_diffs_from_text, diff_view
 from app.components.step_view import typing_indicator, step_view, image_preview_card, STEP_STYLE
 from app.components.session_form import session_config_form, DEFAULT_SESSION_CFG
+from app.components.code_analysis_view import code_analysis_view
+from core.session import StepEvent
+from core.rag_pipeline import RAGPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +51,7 @@ _MCP_COMMANDS = {
     "/cmd": "Execute a shell command",
     "/search": "Search the web for information",
     "/kb": "Search the knowledge base",
+    "/search_kb": "Search knowledge base (alias for /kb)",
     "/step": "Manage debug steps",
     "/help": "Show available commands",
 }
@@ -102,6 +107,7 @@ class DebugView:
 
         # Eager processing caches
         self._eager_vlm_results: dict[str, str] = {}
+        self._eager_vlm_parsed: dict[str, dict] = {}
         self._eager_file_contents: dict[str, str] = {}
 
         self.text_p = DARK_TEXT_PRIMARY if is_dark else LIGHT_TEXT_PRIMARY
@@ -273,7 +279,7 @@ class DebugView:
     async def _eager_process_image(self, path: str, card: ft.Container):
         try:
             from PIL import Image
-            from core.vlm_handler import VLMHandler
+            from core.vlm_handler import VLMHandler, parse_vlm_output
             img = Image.open(path)
             vlm = VLMHandler(providers=self.agent.providers)
             def _update_card(s, icon, color):
@@ -284,14 +290,19 @@ class DebugView:
                 try: card.update()
                 except RuntimeError: pass
             _update_card("Extracting...", ft.Icons.HOURGLASS_TOP, WARNING)
-            # Simulate small delay for visual feedback
             await asyncio.sleep(0.3)
             text = await asyncio.to_thread(vlm.extract_text, img)
             self._eager_vlm_results[path] = text
-            _update_card(f"VLM done ({len(text)} chars)", ft.Icons.CHECK_CIRCLE, SUCCESS)
+            self._eager_vlm_parsed[path] = parse_vlm_output(text)
+            parsed = self._eager_vlm_parsed[path]
+            label = parsed.get("type", "Unknown")
+            if parsed.get("summary"):
+                label += f" - {parsed['summary'][:60]}"
+            _update_card(f"VLM: {label}", ft.Icons.CHECK_CIRCLE, SUCCESS)
         except Exception as exc:
             logger.warning("Eager VLM failed: %s", exc)
             self._eager_vlm_results[path] = ""
+            self._eager_vlm_parsed[path] = {}
 
     async def _eager_read_file(self, path: str):
         try:
@@ -475,9 +486,10 @@ class DebugView:
 
         # VLM switching: if user has images mid-conversation, process with VLM first
         vlm_context = ""
+        vlm_parsed_all = {}
         if images:
             from PIL import Image
-            from core.vlm_handler import VLMHandler
+            from core.vlm_handler import VLMHandler, parse_vlm_output
             vlm = VLMHandler(providers=self.agent.providers)
             for img_path in images:
                 try:
@@ -487,6 +499,11 @@ class DebugView:
                         extracted = await asyncio.to_thread(vlm.extract_text, img)
                     if extracted:
                         vlm_context += f"\n[Image: {img_path.split(chr(92))[-1]}]\nExtracted text: {extracted}\n"
+                    parsed = self._eager_vlm_parsed.get(img_path)
+                    if not parsed and extracted:
+                        parsed = parse_vlm_output(extracted)
+                    if parsed:
+                        vlm_parsed_all[img_path] = parsed
                 except Exception as exc:
                     vlm_context += f"\n[Image: {img_path.split(chr(92))[-1]}]\nFailed to extract: {exc}\n"
 
@@ -546,7 +563,7 @@ class DebugView:
         ws = step_view("warmup", "Initializing agents...", is_dark=self.is_dark, active=True)
         steps_col.controls.append(ws)
         steps_col.update()
-        self._current_events.append(ws)
+        self._current_events.append(StepEvent("warmup", "Initializing agents..."))
         self._rebuild_steps_sidebar()
 
         # Add VLM step if applicable
@@ -554,22 +571,41 @@ class DebugView:
             vs = step_view("image", f"VLM extracted ({len(vlm_context)} chars)", is_dark=self.is_dark, completed=True)
             steps_col.controls.append(vs)
             steps_col.update()
-            self._current_events.append(vs)
+            self._current_events.append(StepEvent("image", f"VLM extracted ({len(vlm_context)} chars)"))
             self._rebuild_steps_sidebar()
 
         # Build context dict
         ctx = {"images": images, "files": files, "file_contents": self._eager_file_contents,
                "vlm_text": vlm_context}
 
-        # Run agent pipeline
-        event_stream, state = await asyncio.to_thread(
-            self.agent.solve, full_query or "Analyze attachments", True, history_list, ctx
-        )
+        # Run agent pipeline with timeout
+        SOLVE_TIMEOUT = 300
+        try:
+            event_stream, state = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.agent.solve, full_query or "Analyze attachments", True, history_list, ctx
+                ),
+                timeout=SOLVE_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            self._add_bubble("**Pipeline timed out** — the agents took too long to respond. Try a simpler query or check Ollama.", is_user=False, is_markdown=True)
+            self._processing = False
+            self.send_btn.visible = True
+            self.stop_btn.visible = False
+            self._update_status("ready")
+            self._cleanup_resources()
+            try:
+                self.send_btn.update()
+                self.stop_btn.update()
+            except RuntimeError:
+                pass
+            return
         self._current_arm = state.arm_selected
         self.last_state = state
 
         full_text = ""
         seen_types = set()
+        _last_partial_time = time.time()
 
         for event in event_stream:
             if self._stop_requested:
@@ -595,6 +631,12 @@ class DebugView:
                 md.update()
                 bubble_container.update()
             elif event.type == "generate":
+                if "generate" not in seen_types:
+                    seen_types.add("generate")
+                    gv = step_view("generate", "Generating solution...", event.metadata, is_dark=self.is_dark, active=True)
+                    steps_col.controls.append(gv)
+                    steps_col.update()
+                    self._rebuild_steps_sidebar()
                 if typing_ind in assistant_col.controls:
                     assistant_col.controls.remove(typing_ind)
                     assistant_col.update()
@@ -604,6 +646,16 @@ class DebugView:
                     full_text += event.content
                     md.value = full_text
                     md.update()
+                    _last_partial_time = time.time()
+                else:
+                    # Heartbeat: if no partial content for >30s, show a keep-alive
+                    elapsed = time.time() - _last_partial_time
+                    if elapsed > 30 and steps_col.controls:
+                        heartbeat_msg = f"Still generating... ({int(elapsed)}s)"
+                        gv = step_view("generate", heartbeat_msg, event.metadata, is_dark=self.is_dark, active=True)
+                        steps_col.controls[-1] = gv
+                        steps_col.update()
+                        self._rebuild_steps_sidebar()
 
         if full_text:
             md.value = full_text
@@ -618,6 +670,29 @@ class DebugView:
             steps_col.controls.append(gs)
             steps_col.update()
             self._rebuild_steps_sidebar()
+
+        # Show code analysis if available
+        agent_results = getattr(state, 'agent_results', {})
+        code_agent_data = agent_results.get("code_agent", {}).get("output", {}).get("data", {})
+        bug_reports = code_agent_data.get("bug_reports", [])
+        if bug_reports:
+            ca_view = code_analysis_view(bug_reports, is_dark=self.is_dark)
+            row_wrapper.content.controls.append(ca_view)
+            try:
+                row_wrapper.update()
+            except RuntimeError:
+                pass
+
+        # Show VLM analysis details
+        if vlm_parsed_all:
+            from app.components.step_view import image_analysis_card
+            combined = {"images": images, "analyses": vlm_parsed_all}
+            ia_card = image_analysis_card(combined, is_dark=self.is_dark)
+            row_wrapper.content.controls.append(ia_card)
+            try:
+                row_wrapper.update()
+            except RuntimeError:
+                pass
 
         self._show_sources(state.retrieved_docs, web_results=state.web_results)
 
@@ -644,6 +719,36 @@ class DebugView:
         except RuntimeError:
             pass
 
+    def _cleanup_resources(self):
+        import gc
+        try:
+            if hasattr(self, 'agent') and self.agent:
+                self.agent.cleanup()
+        except Exception:
+            pass
+        try:
+            from core.database import close as close_db
+            close_db()
+        except Exception:
+            pass
+        try:
+            from core.cache import close_cache
+            import asyncio
+            try:
+                asyncio.get_running_loop()
+                asyncio.ensure_future(close_cache())
+            except RuntimeError:
+                pass
+        except Exception:
+            pass
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+
     def _process_message(self, text: str, images: list[str], files: list[str]):
         asyncio.create_task(self._process_message_task(text, images, files))
 
@@ -668,6 +773,7 @@ class DebugView:
         self._token_label.update()
         self._drop_instance["clear"]()
         self._eager_vlm_results.clear()
+        self._eager_vlm_parsed.clear()
         self._eager_file_contents.clear()
         self._process_message(text, images, code_files)
 
@@ -684,12 +790,129 @@ class DebugView:
         elif command == "/search":
             query = args or "Search attached files"
             self._process_message(query, [], files)
-        elif command == "/kb":
-            self._process_message(f"Search knowledge base for: {args}", [], [])
+        elif command in ("/kb", "/search_kb"):
+            if args:
+                asyncio.create_task(self._handle_kb_search(args))
+            else:
+                self._add_bubble("**Usage:** /kb your search query", is_user=False, is_markdown=True)
         else:
             self._add_bubble(f"Unknown: {command}. Type /help.", is_user=False, is_markdown=True)
 
+    async def _handle_kb_search(self, query: str):
+        self._add_bubble(f"**🔍 KB Search:** _{query}_", is_user=False, is_markdown=True)
+        self.page.update()
+
+        docs = []
+        rag = None
+        try:
+            rag = RAGPipeline(providers=self.agent.providers)
+            if rag.ok:
+                _, docs = await asyncio.to_thread(rag.retrieve_context, query, 10)
+        except Exception as exc:
+            logger.warning("KB search (ChromaDB) failed: %s", exc)
+
+        # Fallback to SQLite if ChromaDB failed or empty
+        if not docs:
+            try:
+                from core.database import kb_search
+                sql_results = await asyncio.to_thread(kb_search, query, 10)
+                for r in sql_results:
+                    docs.append({
+                        "content": r.get("solution_text", ""),
+                        "source": r.get("source", "kb_sqlite"),
+                        "score": 0.5,
+                    })
+            except Exception as exc:
+                logger.warning("KB search (SQLite fallback) also failed: %s", exc)
+
+        if rag:
+            try:
+                rag.close()
+            except Exception:
+                pass
+
+        if not docs:
+            self._add_bubble("**No results found** in the knowledge base. Try a different query or seed the KB:\n```\npython scripts/seed_kb.py\n```", is_user=False, is_markdown=True)
+            return
+
+        results_col = ft.Column(spacing=6)
+        for i, doc in enumerate(docs):
+            score = doc.get("score", 0)
+            score_pct = int(score * 100)
+            color = ft.Colors.GREEN_400 if score >= 0.7 else (ft.Colors.AMBER_400 if score >= 0.4 else ft.Colors.GREY_400)
+            badge = "High" if score >= 0.7 else ("Med" if score >= 0.4 else "Low")
+
+            content_short = doc.get("content", "")[:200] + ("..." if len(doc.get("content", "")) > 200 else "")
+            source = doc.get("source", "kb")
+
+            card = ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text(f"#{i+1}  {source}", size=10, weight=ft.FontWeight.W_600, color=self.accent, expand=1),
+                        ft.Container(
+                            content=ft.Text(f"{badge} {score_pct}%", size=8, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            padding=padding_only(left=4, top=2, right=4, bottom=2),
+                            border_radius=4, bgcolor=color,
+                        ),
+                    ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    ft.Container(height=2),
+                    ft.Text(content_short, size=10, color=self.text_s),
+                    ft.Row([
+                        ft.TextButton(
+                            "Show solution",
+                            style=ft.ButtonStyle(color=self.accent, text_style=ft.TextStyle(size=10)),
+                            on_click=lambda _, d=doc: self._show_kb_solution(d),
+                        ),
+                        ft.TextButton(
+                            "Apply fix",
+                            style=ft.ButtonStyle(color=ft.Colors.GREEN_400, text_style=ft.TextStyle(size=10)),
+                            on_click=lambda _, d=doc: self._apply_kb_fix(d),
+                        ),
+                    ], spacing=4),
+                ], spacing=2),
+                padding=10,
+                border_radius=6,
+                bgcolor=self.accent_sub,
+                border=border_all(0.5, self.border),
+            )
+            results_col.controls.append(card)
+
+        result_container = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.LIBRARY_BOOKS, size=14, color=self.accent),
+                    ft.Text(f"Knowledge Base ({len(docs)} results)", size=11, weight=ft.FontWeight.W_600, color=self.text_p),
+                    ft.Container(expand=1),
+                    ft.Text(f"Query: {query[:40]}{'...' if len(query) > 40 else ''}", size=9, color=self.text_m),
+                ], spacing=4),
+                ft.Divider(height=1, color=self.border),
+                results_col,
+            ], spacing=6),
+            padding=10,
+            border_radius=8,
+            bgcolor=self.bg_surface,
+            border=border_all(0.5, self.border),
+            margin=ft.Margin(left=26, top=4, right=0, bottom=4),
+        )
+        self.chat_log.controls.append(result_container)
+        try:
+            self.chat_log.update()
+        except RuntimeError:
+            pass
+
+    def _show_kb_solution(self, doc: dict):
+        content_full = doc.get("content", "No content")
+        source = doc.get("source", "kb")
+        score = doc.get("score", 0)
+        md_text = f"**Solution from KB** ({source}, relevance: {int(score * 100)}%)\n\n---\n\n{content_full}"
+        self._add_bubble(md_text, is_user=False, is_markdown=True)
+
+    def _apply_kb_fix(self, doc: dict):
+        content_full = doc.get("content", "")
+        self._add_bubble(f"**Applying KB fix...**\n\n```\n{content_full[:500]}\n```\n\nReview the fix above. If it looks correct, use `/write <file>` to apply.", is_user=False, is_markdown=True)
+
     def load_session(self, session):
+        self._cleanup_resources()
         self._session = session
         self.chat_log.controls.clear()
         self.sources_panel.controls.clear()
@@ -726,6 +949,7 @@ class DebugView:
     def _on_clear_attachments(self, e):
         self._drop_instance["clear"]()
         self._eager_vlm_results.clear()
+        self._eager_vlm_parsed.clear()
         self._eager_file_contents.clear()
 
     # ---- Overlay session config ----

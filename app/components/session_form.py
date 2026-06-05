@@ -21,6 +21,16 @@ SKILL_OPTIONS = [
     {"key": "testing", "label": "Testing", "icon": ft.Icons.SCIENCE, "desc": "Write and fix tests"},
 ]
 
+KB_PACKAGE_OPTIONS = [
+    {"key": "error_solutions", "label": "Python Errors", "icon": ft.Icons.ERROR_OUTLINE, "desc": "Common Python error solutions"},
+    {"key": "curated_python", "label": "Python Advanced", "icon": ft.Icons.CODE, "desc": "Advanced Python debugging patterns"},
+    {"key": "curated_javascript", "label": "JS/TS", "icon": ft.Icons.JAVASCRIPT, "desc": "JavaScript & TypeScript errors"},
+    {"key": "curated_docker", "label": "Docker", "icon": ft.Icons.ENGINEERING, "desc": "Docker & Compose troubleshooting"},
+    {"key": "curated_git", "label": "Git", "icon": ft.Icons.SOURCE, "desc": "Git recovery and fixes"},
+    {"key": "curated_web_python", "label": "Web Python", "icon": ft.Icons.WEB, "desc": "FastAPI, Django, Flask, SQLAlchemy"},
+    {"key": "security_guidelines", "label": "Security", "icon": ft.Icons.SHIELD, "desc": "OWASP security guidelines"},
+]
+
 ROLE_OPTIONS = [
     {"key": "developer", "label": "Developer", "desc": "Focus on implementation"},
     {"key": "architect", "label": "Architect", "desc": "Focus on system design"},
@@ -41,6 +51,7 @@ DEFAULT_SESSION_CFG = {
     "skills": ["debugging"],
     "role": "developer",
     "prompt_style": "detailed",
+    "kb_packages": ["error_solutions", "curated_python", "curated_javascript", "curated_docker", "curated_git", "curated_web_python", "security_guidelines"],
 }
 
 
@@ -95,6 +106,37 @@ def session_config_form(is_dark: bool, on_submit, on_cancel):
                 st["chip"].content.controls[1].color = text_p if a else text_m
                 st["chip"].update()
 
+    kb_pkg_toggles = []
+    kb_pkg_col = ft.Column(spacing=4)
+    for pkg in KB_PACKAGE_OPTIONS:
+        active = True
+        chip = ft.Container(
+            content=ft.Row([
+                ft.Icon(pkg["icon"], size=16, color=accent if active else text_m),
+                ft.Text(pkg["label"], size=12, weight=ft.FontWeight.W_500,
+                        color=text_p if active else text_m),
+            ], spacing=4),
+            padding=padding_symmetric(horizontal=10, vertical=6),
+            border_radius=6,
+            bgcolor=accent_sub if active else bg_surface,
+            border=border_all(1, accent + "40" if active else border),
+            ink=True,
+        )
+        kb_pkg_toggles.append({"key": pkg["key"], "active": active, "chip": chip})
+        chip.on_click = lambda _, k=pkg["key"]: _toggle_kb_pkg(k)
+        kb_pkg_col.controls.append(chip)
+
+    def _toggle_kb_pkg(key):
+        for pt in kb_pkg_toggles:
+            if pt["key"] == key:
+                pt["active"] = not pt["active"]
+                a = pt["active"]
+                pt["chip"].bgcolor = accent_sub if a else bg_surface
+                pt["chip"].border = border_all(1, accent + "40" if a else border)
+                pt["chip"].content.controls[0].color = accent if a else text_m
+                pt["chip"].content.controls[1].color = text_p if a else text_m
+                pt["chip"].update()
+
     role_dd = ft.Dropdown(
         label="Role",
         value="developer",
@@ -127,11 +169,13 @@ def session_config_form(is_dark: bool, on_submit, on_cancel):
             error_text.update()
             return
         active_skills = [st["key"] for st in skill_toggles if st["active"]]
+        active_kb_pkgs = [pt["key"] for pt in kb_pkg_toggles if pt["active"]]
         cfg = {
             "name": name,
             "skills": active_skills,
             "role": role_dd.value or "developer",
             "prompt_style": prompt_dd.value or "detailed",
+            "kb_packages": active_kb_pkgs,
         }
         on_submit(cfg)
 
@@ -163,6 +207,10 @@ def session_config_form(is_dark: bool, on_submit, on_cancel):
             ft.Text("Select the capabilities for this session", size=10, color=text_s),
             skills_col,
             ft.Row([role_dd, prompt_dd], spacing=10),
+            ft.Divider(height=1, color=border),
+            ft.Text("Knowledge Base Packages", size=12, weight=ft.FontWeight.W_600, color=text_p),
+            ft.Text("Select KB collections to search during sessions", size=10, color=text_s),
+            kb_pkg_col,
             ft.Divider(height=1, color=border),
             ft.Row([cancel_btn, submit_btn], alignment=ft.MainAxisAlignment.END, spacing=8),
         ], spacing=8, scroll=ft.ScrollMode.AUTO),

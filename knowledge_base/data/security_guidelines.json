@@ -1,0 +1,421 @@
+[
+  {
+    "title": "OWASP Broken Access Control",
+    "tags": ["security", "access control", "authorization", "OWASP"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["access control", "unauthorized access", "IDOR", "privilege escalation"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Implement server-side access control checks on every request",
+      "2. Use role-based access control (RBAC) or attribute-based (ABAC)",
+      "3. Deny by default — only grant explicit permissions",
+      "4. Validate object ownership for every resource access",
+      "5. Use @has_permission decorators or middleware",
+      "6. Never rely on client-side access control",
+      "7. Audit all API endpoints for missing authorization"
+    ],
+    "code_example": "def get_user_document(document_id, current_user):\n    doc = Document.query.get_or_404(document_id)\n    if doc.owner_id != current_user.id and not current_user.is_admin:\n        abort(403, description='Access denied')\n    return doc",
+    "related_topics": ["RBAC", "IDOR", "authorization", "security best practices"],
+    "source": "curated"
+  },
+  {
+    "title": "SQL Injection prevention",
+    "tags": ["security", "sql", "injection", "database"],
+    "languages": ["python", "javascript", "go", "sql"],
+    "error_patterns": ["SQL injection", "raw SQL", "cursor.execute(f", "string formatting in query"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. ALWAYS use parameterized queries / prepared statements",
+      "2. Never concatenate user input into SQL strings",
+      "3. Use ORM (SQLAlchemy, Django ORM, Prisma) for automatic escaping",
+      "4. For raw SQL: use ? or :name placeholders",
+      "5. Validate and sanitize all user inputs",
+      "6. Use least-privilege database accounts",
+      "7. Run SQLMap or similar tools to test for vulnerabilities"
+    ],
+    "code_example": "# WRONG — vulnerable\ncursor.execute(f\"SELECT * FROM users WHERE email = '{email}'\")\n\n# CORRECT — parameterized\ncursor.execute(\"SELECT * FROM users WHERE email = ?\", (email,))\n\n# ORM\nUser.query.filter_by(email=email).first()",
+    "related_topics": ["SQL injection", "parameterized queries", "ORM", "database security"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP Cross-Site Scripting (XSS)",
+    "tags": ["security", "xss", "injection", "sanitization"],
+    "languages": ["javascript", "python", "html"],
+    "error_patterns": ["XSS", "cross-site scripting", "unsafe innerHTML", "dangerouslySetInnerHTML"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Always escape output: use template engines with auto-escaping (Jinja2, React JSX)",
+      "2. Never use innerHTML or dangerouslySetInnerHTML with user input",
+      "3. Use textContent instead of innerHTML for text",
+      "4. Set Content-Security-Policy (CSP) headers",
+      "5. Validate and sanitize HTML input with DOMPurify (frontend) or bleach (Python)",
+      "6. Use HttpOnly and Secure cookies",
+      "7. For rich text: use a safe HTML sanitizer"
+    ],
+    "code_example": "# Python: sanitize HTML with bleach\nimport bleach\ntrusted_html = bleach.clean(\n    user_input,\n    tags=['p', 'b', 'i', 'a', 'ul', 'li'],\n    attributes={'a': ['href', 'rel']},\n    protocols=['http', 'https']\n)",
+    "related_topics": ["XSS", "CSP", "bleach", "sanitization", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "Password hashing best practices",
+    "tags": ["security", "password", "hashing", "authentication"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["password", "md5", "sha1", "plain text", "bcrypt", "argon2"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. NEVER store passwords in plain text",
+      "2. Use bcrypt: pip install bcrypt",
+      "3. Use Argon2 (more secure): pip install argon2-cffi",
+      "4. Use Django's make_password / check_password if using Django",
+      "5. Use Werkzeug's generate_password_hash / check_password_hash (Flask)",
+      "6. Always use a strong, unique salt per password",
+      "7. Implement rate limiting on login endpoints"
+    ],
+    "code_example": "from argon2 import PasswordHasher\nph = PasswordHasher()\n# Hash\nhashed = ph.hash('user_password')\n# Verify\ntry:\n    ph.verify(hashed, 'user_password')\n    if ph.check_needs_rehash(hashed):\n        new_hash = ph.hash('user_password')\nexcept Exception:\n    print('Invalid password')",
+    "related_topics": ["bcrypt", "Argon2", "authentication", "password security"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP CSRF (Cross-Site Request Forgery)",
+    "tags": ["security", "csrf", "cross-site", "tokens"],
+    "languages": ["python", "javascript", "html"],
+    "error_patterns": ["CSRF", "cross-site request forgery", "SameSite", "csrf token"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use anti-CSRF tokens in all state-changing forms",
+      "2. Django: {% csrf_token %} in forms",
+      "3. FastAPI/Flask: use csrf-token library or custom middleware",
+      "4. Set SameSite=Lax or SameSite=Strict on cookies",
+      "5. Use Double Submit Cookie pattern for APIs",
+      "6. For APIs: use token-based auth (JWT, OAuth) instead of cookies",
+      "7. Implement custom request headers (e.g., X-Requested-By)"
+    ],
+    "code_example": "from flask_wtf.csrf import CSRFProtect\ncsrf = CSRFProtect(app)\n\n# Or manually with SameSite\napp.config.update(\n    SESSION_COOKIE_SAMESITE='Lax',\n    SESSION_COOKIE_HTTPONLY=True,\n    SESSION_COOKIE_SECURE=True\n)",
+    "related_topics": ["CSRF", "SameSite", "cookies", "tokens"],
+    "source": "curated"
+  },
+  {
+    "title": "Sensitive data exposure via secrets in code",
+    "tags": ["security", "secrets", "environment", "credentials"],
+    "languages": ["python", "javascript", "bash"],
+    "error_patterns": ["API_KEY", "password =", "secret =", "SECRET_KEY", "hardcoded credentials"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. NEVER hardcode secrets in source code",
+      "2. Use environment variables: os.environ['DB_PASSWORD']",
+      "3. Use .env files with python-dotenv (add .env to .gitignore)",
+      "4. Use secret management: HashiCorp Vault, AWS Secrets Manager, Azure Key Vault",
+      "5. Scan with git-secrets, truffleHog, or detect-secrets",
+      "6. Rotate leaked secrets immediately",
+      "7. Use pre-commit hooks to prevent accidental secret commits"
+    ],
+    "code_example": "# .env (never committed)\nDB_PASSWORD=super_secret_123\nAPI_KEY=abc123def456\n\n# Python\nimport os\nfrom dotenv import load_dotenv\nload_dotenv()\ndb_pass = os.environ['DB_PASSWORD']\n\n# Always add .env to .gitignore\necho '.env' >> .gitignore",
+    "related_topics": ["secrets", "environment variables", "dotenv", "secret scanning"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP Security Misconfiguration",
+    "tags": ["security", "misconfiguration", "headers", "debug"],
+    "languages": ["yaml", "python", "bash"],
+    "error_patterns": ["DEBUG=True", "CORS star", "directory listing", "default credentials"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Never run DEBUG mode in production",
+      "2. Set secure HTTP headers: HSTS, X-Frame-Options, X-Content-Type-Options",
+      "3. Disable directory listing on web servers",
+      "4. Use non-default credentials for all services",
+      "5. Remove unused features, sample code, and admin interfaces",
+      "6. Apply security patches regularly",
+      "7. Run security audits: nmap, nikto, zap"
+    ],
+    "code_example": "# Secure headers middleware\nclass SecurityHeadersMiddleware:\n    async def __call__(self, request, call_next):\n        response = await call_next(request)\n        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'\n        response.headers['X-Frame-Options'] = 'DENY'\n        response.headers['X-Content-Type-Options'] = 'nosniff'\n        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'\n        return response",
+    "related_topics": ["CSP", "HSTS", "security headers", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP Insecure Deserialization",
+    "tags": ["security", "deserialization", "pickle", "yaml", "json"],
+    "languages": ["python", "javascript", "java"],
+    "error_patterns": ["pickle.loads", "yaml.load", "unsafe deserialization", "eval", "deserialization"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Never deserialize untrusted data with pickle or yaml.load",
+      "2. Use safe formats: JSON, MessagePack (avoid arbitrary code execution)",
+      "3. If pickle must be used: validate source, use hmac signing",
+      "4. Use yaml.safe_load() instead of yaml.load()",
+      "5. Validate and sanitize all deserialized data",
+      "6. Use structured validation (Pydantic, Zod) after deserialization",
+      "7. Run in a sandbox if you must deserialize untrusted data"
+    ],
+    "code_example": "# UNSAFE\nimport pickle\ndata = pickle.loads(untrusted_input)  # Arbitrary code execution!\n\n# SAFE alternatives\nimport json\ndata = json.loads(untrusted_input)\n\n# Or validate after safe deserialization\nfrom pydantic import BaseModel\nclass SafeData(BaseModel):\n    name: str\n    value: int\nvalidated = SafeData(**json.loads(untrusted_input))",
+    "related_topics": ["pickle", "deserialization", "yaml", "RCE", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP Using Components with Known Vulnerabilities",
+    "tags": ["security", "dependencies", "vulnerabilities", "SCA"],
+    "languages": ["python", "javascript", "go", "java"],
+    "error_patterns": ["CVE", "known vulnerability", "outdated package", "npm audit", "pip audit"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Regularly run dependency scanners: pip-audit, npm audit, cargo audit",
+      "2. Enable Dependabot or Renovate for automated PRs",
+      "3. Remove unused dependencies",
+      "4. Pin exact versions in requirements.txt / package.json",
+      "5. Monitor CVE databases for your stack",
+      "6. Use SBoMs (Software Bill of Materials) with CycloneDX",
+      "7. Update base Docker images regularly"
+    ],
+    "code_example": "# npm\necho \"Run npm audit to find vulnerabilities\"\nnpm audit\nnpm audit fix\n\n# Python\necho \"Run pip-audit to check\"\npip install pip-audit\npip-audit\n\n# Check outdated packages\npip list --outdated",
+    "related_topics": ["dependencies", "CVE", "Dependabot", "npm audit", "SBOM"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP Insufficient Logging & Monitoring",
+    "tags": ["security", "logging", "monitoring", "audit"],
+    "languages": ["python", "javascript", "bash"],
+    "error_patterns": ["no logging", "unlogged error", "audit trail missing", "forensics impossible"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Log all authentication events (login, logout, failures)",
+      "2. Log all access control failures (403 responses)",
+      "3. Include: timestamp, user ID, IP, action, resource, result",
+      "4. Use structured logging (JSON format) for easy analysis",
+      "5. Never log sensitive data (passwords, tokens, PII)",
+      "6. Set up alerting on suspicious patterns",
+      "7. Use SIEM tools (ELK, Splunk, Datadog) for central monitoring"
+    ],
+    "code_example": "import structlog\nlogger = structlog.get_logger()\n\n# Log security event\nlogger.warning('access_denied',\n    user_id=user.id,\n    resource=f'/api/documents/{doc_id}',\n    action='read',\n    ip=request.client.host,\n    timestamp=datetime.utcnow().isoformat()\n)",
+    "related_topics": ["logging", "monitoring", "SIEM", "audit trail"],
+    "source": "curated"
+  },
+  {
+    "title": "JWT token security best practices",
+    "tags": ["security", "jwt", "token", "authentication"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["JWT", "token", "HS256", "secret too weak", "jwt expiration"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use RS256 or ES256 (asymmetric) instead of HS256 in production",
+      "2. Keep JWT secrets strong: min 256-bit random key",
+      "3. Set short expiration times (15-60 minutes for access tokens)",
+      "4. Use refresh tokens for long-lived sessions",
+      "5. Validate the signature on every request",
+      "6. Use aud (audience) and iss (issuer) claims",
+      "7. Store JWTs securely (httpOnly cookies, not localStorage for sensitive apps)",
+      "8. Never include sensitive data in JWT payload (it's base64, not encrypted)"
+    ],
+    "code_example": "import jwt\nfrom datetime import datetime, timedelta\n\n# ENCODE\npayload = {\n    'sub': user.id,\n    'iat': datetime.utcnow(),\n    'exp': datetime.utcnow() + timedelta(minutes=30),\n    'aud': 'myapp-api',\n    'iss': 'myapp-auth'\n}\ntoken = jwt.encode(payload, SECRET_KEY, algorithm='HS256')\n\n# DECODE & VALIDATE\ntry:\n    decoded = jwt.decode(\n        token, SECRET_KEY,\n        algorithms=['HS256'],\n        audience='myapp-api',\n        issuer='myapp-auth'\n    )\nexcept jwt.ExpiredSignatureError:\n    return 'Token expired', 401\nexcept jwt.InvalidTokenError:\n    return 'Invalid token', 401",
+    "related_topics": ["JWT", "tokens", "OAuth2", "authentication", "refresh tokens"],
+    "source": "curated"
+  },
+  {
+    "title": "Rate limiting and brute force protection",
+    "tags": ["security", "rate limit", "brute force", "throttling"],
+    "languages": ["python", "javascript", "bash"],
+    "error_patterns": ["brute force", "rate limiting", "too many requests", "429"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Implement rate limiting on login endpoints (5 attempts per minute)",
+      "2. Use token bucket or sliding window algorithms",
+      "3. Store rate limits in Redis for distributed systems",
+      "4. Return 429 Too Many Requests with Retry-After header",
+      "5. Implement account lockout after N failed attempts",
+      "6. Add CAPTCHA after multiple failed attempts",
+      "7. Rate limit by IP + user combination, not just IP"
+    ],
+    "code_example": "from fastapi import HTTPException\nimport aioredis\n\nasync def check_rate_limit(redis, key: str, max_attempts: int = 5, window: int = 60):\n    current = await redis.incr(key)\n    if current == 1:\n        await redis.expire(key, window)\n    if current > max_attempts:\n        raise HTTPException(\n            status_code=429,\n            detail='Too many attempts. Try again later.',\n            headers={'Retry-After': str(window)}\n        )",
+    "related_topics": ["rate limiting", "brute force", "Redis", "CAPTCHA"],
+    "source": "curated"
+  },
+  {
+    "title": "Content Security Policy (CSP) hardening",
+    "tags": ["security", "csp", "headers", "xss"],
+    "languages": ["html", "python", "javascript"],
+    "error_patterns": ["CSP", "Content-Security-Policy", "script-src", "unsafe-inline", "XSS"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Start with a restrictive policy and loosen as needed",
+      "2. Use report-only mode first: Content-Security-Policy-Report-Only",
+      "3. Set script-src to specific domains, never allow unsafe-inline",
+      "4. Use nonces or hashes for inline scripts",
+      "5. Restrict object-src, frame-src, and base-uri",
+      "6. Set form-action to limit form submission targets",
+      "7. Monitor CSP reports for violations"
+    ],
+    "code_example": "Content-Security-Policy: \n    default-src 'self';\n    script-src 'self' 'nonce-abc123';\n    style-src 'self' 'unsafe-inline';\n    img-src 'self' data: https:;\n    connect-src 'self' https://api.example.com;\n    frame-ancestors 'none';\n    form-action 'self';\n    base-uri 'self';\n    report-uri /csp-report",
+    "related_topics": ["CSP", "security headers", "XSS", "nonce"],
+    "source": "curated"
+  },
+  {
+    "title": "Server-Side Request Forgery (SSRF) prevention",
+    "tags": ["security", "ssrf", "server-side", "injection"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["SSRF", "server-side request forgery", "internal network access", "metadata endpoint"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Validate and sanitize all URLs before making requests",
+      "2. Block private IPs (127.0.0.1, 10.x.x.x, 172.16-31.x.x, 192.168.x.x)",
+      "3. Use an allowlist of permitted domains/protocols",
+      "4. Disable redirect following or validate redirect targets",
+      "5. Use a dedicated service with restricted network access for outbound requests",
+      "6. Do not pass raw URLs from user input to fetch/requests",
+      "7. Use URL parsing to validate scheme, host, and port"
+    ],
+    "code_example": "from urllib.parse import urlparse\nimport ipaddress\n\ndef is_safe_url(url: str) -> bool:\n    parsed = urlparse(url)\n    if parsed.scheme not in ('https', 'http'):\n        return False\n    try:\n        ip = ipaddress.ip_address(parsed.hostname)\n        if ip.is_private or ip.is_loopback or ip.is_link_local:\n            return False\n    except ValueError:\n        pass  # hostname, not IP\n    return True",
+    "related_topics": ["SSRF", "network security", "URL validation", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "Open Redirect vulnerability prevention",
+    "tags": ["security", "open redirect", "phishing", "URL validation"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["redirect", "next", "returnUrl", "redirect_uri", "open redirect"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Never redirect to user-supplied URLs without validation",
+      "2. Use an allowlist of permitted redirect domains",
+      "3. Redirect to a path only (relative URL), not full URL",
+      "4. Use a mapping: redirect to key instead of URL",
+      "5. Validate the redirect URL against the original host",
+      "6. Do not accept URLs with different origins than your app",
+      "7. Show a confirmation page for external redirects"
+    ],
+    "code_example": "from urllib.parse import urlparse, urljoin\n\ndef safe_redirect(request, next_url: str) -> str:\n    host = request.url.hostname\n    parsed = urlparse(next_url)\n    # Only allow relative URLs or same host\n    if not parsed.netloc:\n        return next_url  # relative\n    if parsed.hostname == host:\n        return next_url\n    # Fallback to default\n    return '/dashboard'",
+    "related_topics": ["open redirect", "phishing", "URL validation", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "HTTPS and TLS best practices",
+    "tags": ["security", "tls", "https", "certificate", "SSL"],
+    "languages": ["yaml", "bash", "python"],
+    "error_patterns": ["SSL", "TLS", "certificate expired", "mixed content", "HTTPS"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use Let's Encrypt for free TLS certificates",
+      "2. Enforce HTTPS: redirect all HTTP to HTTPS",
+      "3. Use HSTS header: Strict-Transport-Security",
+      "4. Disable old TLS versions (TLS 1.0, 1.1; enable TLS 1.2, 1.3)",
+      "5. Use strong cipher suites only",
+      "6. Use tools like SSL Labs or testssl.sh to audit",
+      "7. Set secure and httpOnly flags on cookies",
+      "8. Fix mixed content warnings (load all resources over HTTPS)"
+    ],
+    "code_example": "from starlette.middleware.base import BaseHTTPMiddleware\nfrom starlette.responses import RedirectResponse\n\nclass HTTPSRedirectMiddleware:\n    async def __call__(self, request, call_next):\n        if request.url.scheme != 'https' and not request.url.hostname.startswith('localhost'):\n            url = request.url.replace(scheme='https')\n            return RedirectResponse(url)\n        return await call_next(request)",
+    "related_topics": ["HTTPS", "TLS", "SSL", "certificates", "HSTS"],
+    "source": "curated"
+  },
+  {
+    "title": "Environment variable security (Docker secrets, vaults)",
+    "tags": ["security", "env", "secrets", "docker", "vault"],
+    "languages": ["yaml", "bash", "python"],
+    "error_patterns": ["env variable leaked", "docker secrets", "vault", "environment variable in logs"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use Docker secrets for sensitive data in containers",
+      "2. Use HashiCorp Vault or AWS Secrets Manager for dynamic secrets",
+      "3. Never log environment variables",
+      "4. Use .env files for local dev only (never committed)",
+      "5. Encrypt secrets at rest and in transit",
+      "6. Rotate secrets regularly (every 90 days minimum)",
+      "7. Use principle of least privilege for secret access"
+    ],
+    "code_example": "# Docker secrets\n# docker secret create db_password ./db_password.txt\n\n# docker-compose.yml\nservices:\n  app:\n    image: myapp\n    secrets:\n      - db_password\n\nsecrets:\n  db_password:\n    external: true\n\n# Access in container: /run/secrets/db_password",
+    "related_topics": ["Docker secrets", "Vault", "secrets management", "encryption"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP XML External Entities (XXE)",
+    "tags": ["security", "xxe", "xml", "injection"],
+    "languages": ["python", "java", "bash"],
+    "error_patterns": ["XXE", "XML entity", "external entity", "lxml", "xml.etree"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Disable external entity processing in XML parsers",
+      "2. Use defusedxml library for Python XML parsing",
+      "3. Prefer JSON over XML where possible",
+      "4. Validate XML against a schema (XSD)",
+      "5. Do not use SAX or DOM parsers with entity resolution enabled",
+      "6. Use lxml with resolve_entities=False"
+    ],
+    "code_example": "import defusedxml.ElementTree as ET\n# Safe parsing\nroot = ET.fromstring(xml_data)\n\n# If using lxml:\nfrom lxml import etree\nparser = etree.XMLParser(resolve_entities=False, no_network=True)\ntree = etree.fromstring(xml_data, parser)",
+    "related_topics": ["XXE", "XML", "defusedxml", "lxml", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "Secure file upload handling",
+    "tags": ["security", "file upload", "validation", "malware"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["file upload", "arbitrary file", "path traversal", "MIME type"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Validate file extension AND MIME type (server-side, not just client-side)",
+      "2. Use a random filename when saving (UUID-based)",
+      "3. Store uploaded files outside the web root",
+      "4. Set maximum file size limits",
+      "5. Scan files for malware (ClamAV)",
+      "6. Serve files through a proxy that sets correct Content-Disposition",
+      "7. Disable execution permissions on upload directories"
+    ],
+    "code_example": "import uuid\nimport os\nfrom pathlib import Path\n\nALLOWED_EXTENSIONS = {'.jpg', '.png', '.gif', '.pdf'}\nMAX_SIZE = 5 * 1024 * 1024  # 5MB\n\ndef save_upload(upload_file) -> str:\n    ext = Path(upload_file.filename).suffix.lower()\n    if ext not in ALLOWED_EXTENSIONS:\n        raise ValueError(f'Extension {ext} not allowed')\n    if upload_file.content_type not in ['image/jpeg', 'image/png', 'application/pdf']:\n        raise ValueError('Invalid MIME type')\n    filename = f'{uuid.uuid4()}{ext}'\n    filepath = Path('uploads') / filename\n    with open(filepath, 'wb') as f:\n        f.write(upload_file.file.read())\n    return str(filepath)",
+    "related_topics": ["file upload", "malware", "path traversal", "validation"],
+    "source": "curated"
+  },
+  {
+    "title": "API authentication with API keys",
+    "tags": ["security", "API keys", "authentication", "authorization"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["API key", "key rotation", "key in URL", "key compromised"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use API keys in headers, never in URL query parameters",
+      "2. Rotate keys periodically (every 90 days)",
+      "3. Support key revocation (disable compromised keys immediately)",
+      "4. Use scoped keys with limited permissions",
+      "5. Rate limit per API key",
+      "6. Never log full API keys (mask them: 'sk-...xyz')",
+      "7. Use hashed API keys in the database (like password hashing)"
+    ],
+    "code_example": "import hashlib\nimport secrets\n\ndef generate_api_key() -> tuple[str, str]:\n    # Return: (full_key, hashed_key_for_db)\n    raw_key = f'sk-{secrets.token_urlsafe(32)}'\n    hashed = hashlib.sha256(raw_key.encode()).hexdigest()\n    return raw_key, hashed\n\ndef verify_api_key(raw_key: str, stored_hash: str) -> bool:\n    return hashlib.sha256(raw_key.encode()).hexdigest() == stored_hash",
+    "related_topics": ["API keys", "authentication", "rate limiting", "key rotation"],
+    "source": "curated"
+  },
+  {
+    "title": "OWASP Path Traversal prevention",
+    "tags": ["security", "path traversal", "directory traversal", "file access"],
+    "languages": ["python", "javascript", "go"],
+    "error_patterns": ["../../", "path traversal", "directory traversal", "..\\", "%2e%2e%2f"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Never use user input directly in file paths",
+      "2. Resolve and validate the final path: os.path.realpath(path)",
+      "3. Check that the resolved path starts with the allowed base directory",
+      "4. Use a file ID to path mapping (not filenames from users)",
+      "5. Reject paths containing '..' or starting with '/'",
+      "6. Use pathlib for safer path manipulation"
+    ],
+    "code_example": "from pathlib import Path\n\ndef safe_read(base_dir: str, filename: str) -> bytes:\n    base = Path(base_dir).resolve()\n    filepath = (base / filename).resolve()\n    # Ensure filepath is within base_dir\n    if not str(filepath).startswith(str(base)):\n        raise PermissionError('Access denied')\n    if not filepath.exists():\n        raise FileNotFoundError('File not found')\n    return filepath.read_bytes()",
+    "related_topics": ["path traversal", "file security", "pathlib", "OWASP"],
+    "source": "curated"
+  },
+  {
+    "title": "Security headers checklist",
+    "tags": ["security", "headers", "HSTS", "CSP", "X-Frame-Options"],
+    "languages": ["python", "yaml", "bash"],
+    "error_patterns": ["missing security headers", "X-Frame-Options", "CSP missing", "HSTS"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Strict-Transport-Security: max-age=31536000; includeSubDomains",
+      "2. X-Frame-Options: DENY",
+      "3. X-Content-Type-Options: nosniff",
+      "4. Referrer-Policy: strict-origin-when-cross-origin",
+      "5. Permissions-Policy: geolocation=(), microphone=(), camera=()",
+      "6. Content-Security-Policy: (restrictive)",
+      "7. X-XSS-Protection: 0 (deprecated, use CSP instead)",
+      "8. Remove Server and X-Powered-By headers"
+    ],
+    "code_example": "SECURITY_HEADERS = {\n    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',\n    'X-Frame-Options': 'DENY',\n    'X-Content-Type-Options': 'nosniff',\n    'Referrer-Policy': 'strict-origin-when-cross-origin',\n    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',\n    'X-XSS-Protection': '0',\n}\n\n# FastAPI middleware to apply these headers\n@app.middleware('http')\nasync def add_security_headers(request, call_next):\n    response = await call_next(request)\n    for header, value in SECURITY_HEADERS.items():\n        response.headers[header] = value\n    return response",
+    "related_topics": ["security headers", "HSTS", "CSP", "X-Frame-Options", "OWASP"],
+    "source": "curated"
+  }
+]

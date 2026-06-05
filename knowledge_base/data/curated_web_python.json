@@ -1,0 +1,452 @@
+[
+  {
+    "title": "FastAPI: Pydantic validation errors",
+    "tags": ["fastapi", "pydantic", "validation", "API"],
+    "languages": ["python"],
+    "error_patterns": ["422 Unprocessable Entity", "field required", "ValidationError", "value_error"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Check the request body matches the Pydantic model schema",
+      "2. Use `response_model` to control output serialization",
+      "3. Use `example` in Field() for sample data in docs",
+      "4. Use `validator` decorator for custom validation logic",
+      "5. Check type coercion (str->int, etc.)",
+      "6. Enable debug logging: `uvicorn app:app --log-level debug`",
+      "7. Use `request.json()` to inspect raw incoming body"
+    ],
+    "code_example": "from pydantic import BaseModel, Field, validator\nclass Item(BaseModel):\n    name: str = Field(..., min_length=1, max_length=100)\n    price: float = Field(..., gt=0)\n    @validator('price')\n    def check_price(cls, v):\n        if v > 10000:\n            raise ValueError('Price too high')\n        return v",
+    "related_topics": ["FastAPI", "Pydantic", "validation", "API design"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: CSRF token missing or incorrect",
+    "tags": ["django", "csrf", "form", "security"],
+    "languages": ["python", "html"],
+    "error_patterns": ["CSRF token missing", "CSRF token incorrect", "CSRF verification failed", "403 Forbidden"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Add `{% csrf_token %}` inside all POST form tags",
+      "2. For AJAX: get token from cookie and set `X-CSRFToken` header",
+      "3. Use `@csrf_exempt` decorator for API views (not recommended)",
+      "4. Ensure middleware includes `CsrfViewMiddleware`",
+      "5. For REST APIs: use token-based auth instead of CSRF",
+      "6. Check SESSION_COOKIE_SAMESITE and CSRF_COOKIE_SAMESITE settings"
+    ],
+    "code_example": "{% extends 'base.html' %}\n{% block content %}\n<form method=\"post\">\n  {% csrf_token %}\n  {{ form.as_p }}\n  <button type=\"submit\">Submit</button>\n</form>\n{% endblock %}",
+    "related_topics": ["Django", "CSRF", "forms", "middleware"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: CORS errors with frontend",
+    "tags": ["fastapi", "cors", "frontend", "cross-origin"],
+    "languages": ["python"],
+    "error_patterns": ["CORS", "Cross-Origin Request Blocked", "No 'Access-Control-Allow-Origin'", "CORS policy"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Install `CORSMiddleware` from FastAPI",
+      "2. Add allowed origins, methods, and headers",
+      "3. In development: `allow_origins=[\"*\"]`",
+      "4. For production: specify exact origins",
+      "5. Add `allow_credentials=True` if using cookies/auth",
+      "6. Handle preflight OPTIONS requests automatically"
+    ],
+    "code_example": "from fastapi.middleware.cors import CORSMiddleware\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"http://localhost:5173\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)",
+    "related_topics": ["FastAPI", "CORS", "middleware", "frontend integration"],
+    "source": "curated"
+  },
+  {
+    "title": "Flask: Application context errors",
+    "tags": ["flask", "context", "application", "request"],
+    "languages": ["python"],
+    "error_patterns": ["Working outside of application context", "RuntimeError: No application found", "No request context", "outside of application context"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Wrap code in `app.app_context()` when accessing `current_app` outside request",
+      "2. Use `app.test_request_context()` for testing routes",
+      "3. Use `g` proxy only within request context",
+      "4. Use `@app.before_request` to set up per-request state",
+      "5. For background tasks: pass `app` explicitly, don't access `current_app`"
+    ],
+    "code_example": "from flask import current_app\ndef send_email_async(app, to, subject):\n    with app.app_context():\n        mail = current_app.extensions['mail']\n        mail.send_message(subject, recipients=[to], body='...')\n\n# In route:\nThread(target=send_email_async, args=(app, user.email, 'Welcome')).start()",
+    "related_topics": ["Flask", "application context", "request context", "current_app"],
+    "source": "curated"
+  },
+  {
+    "title": "SQLAlchemy: session management and detached instances",
+    "tags": ["python", "sqlalchemy", "session", "ORM", "detached"],
+    "languages": ["python"],
+    "error_patterns": ["DetachedInstanceError", "Session is closed", "sqlalchemy\\.orm\\.exc\\.DetachedInstanceError", "lazy load outside session"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Keep session open while accessing lazy-loaded attributes",
+      "2. Use `session.merge()` to re-attach detached instance",
+      "3. Use `joinedload()` or `selectinload()` to eager load relationships",
+      "4. Use `session.expire_all()` before querying stale data",
+      "5. Use Flask-SQLAlchemy or FastAPI dependency for per-request sessions",
+      "6. Use `session.refresh(obj)` for up-to-date data from DB"
+    ],
+    "code_example": "from sqlalchemy.orm import selectinload\nstmt = select(User).options(selectinload(User.posts))\nuser = await session.execute(stmt)\n# Posts are eagerly loaded — accessible after session close\nuser.posts  # No DetachedInstanceError",
+    "related_topics": ["SQLAlchemy", "session", "ORM", "lazy loading", "relationships"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: async SQLAlchemy sessions in dependencies",
+    "tags": ["fastapi", "sqlalchemy", "async", "dependency injection"],
+    "languages": ["python"],
+    "error_patterns": ["MissingGreenlet", "sqlalchemy\\.exc\\.MissingGreenlet", "can't use sync session in async", "greenlet_spawn"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Install `sqlalchemy[asyncio]` (SQLAlchemy 1.4+ async)",
+      "2. Use `async def` session dependency",
+      "3. Use `AsyncSession` from `sqlalchemy.ext.asyncio`",
+      "4. Use `selectinload` for eager loading in async mode",
+      "5. Don't mix sync and async sessions in same request"
+    ],
+    "code_example": "from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine\nfrom sqlalchemy.orm import selectinload\n\nasync def get_db() -> AsyncSession:\n    async with AsyncSession(engine) as session:\n        yield session\n\n@app.get('/users/{id}')\nasync def get_user(id: int, db: AsyncSession = Depends(get_db)):\n    result = await db.execute(select(User).options(selectinload(User.posts)))",
+    "related_topics": ["FastAPI", "SQLAlchemy", "async", "dependency injection"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: migrations conflicts",
+    "tags": ["django", "migrations", "merge", "conflict"],
+    "languages": ["python", "bash"],
+    "error_patterns": ["Migration .* conflicts with", "django\\.db\\.migrations\\.exceptions\\.NodeConflictError", "Migration conflict", "makemigrations"],
+    "severity": "high",
+    "solution_steps": [
+      "1. `python manage.py makemigrations --merge`",
+      "2. Manually edit migration dependencies",
+      "3. Resolve by merging: `python manage.py makemigrations --merge` will prompt",
+      "4. After merge: `python manage.py migrate`",
+      "5. To reset single app: delete migration files and `python manage.py makemigrations`",
+      "6. Use `python manage.py migrate --fake` cautiously"
+    ],
+    "code_example": "python manage.py makemigrations --merge\n# Review the merge migration\npython manage.py migrate\n\n# If totally stuck: (backup DB first!)\npython manage.py migrate <app> zero\n# Then re-migrate",
+    "related_topics": ["Django", "migrations", "merge", "database"],
+    "source": "curated"
+  },
+  {
+    "title": "Celery: task not executing (no worker)",
+    "tags": ["python", "celery", "worker", "async", "task"],
+    "languages": ["python", "bash"],
+    "error_patterns": ["Received unregistered task", "Celery task not running", "No worker", "EAGAIN"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Start worker: `celery -A tasks worker --loglevel=info`",
+      "2. Ensure task is registered: `@app.task` or `@shared_task`",
+      "3. Check broker URL (Redis/RabbitMQ) is correct",
+      "4. Check result backend configuration",
+      "5. Use `delay()` or `apply_async()` to queue tasks",
+      "6. Restart workers after code changes",
+      "7. Use `flower` for monitoring: `celery -A tasks flower`"
+    ],
+    "code_example": "from celery import Celery\napp = Celery('tasks', broker='redis://localhost:6379/0')\n@app.task\ndef add(x, y):\n    return x + y\n\n# In code:\nresult = add.delay(4, 4)\nprint(result.get(timeout=5))",
+    "related_topics": ["Celery", "workers", "Redis", "task queue"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: WebSocket connection handling",
+    "tags": ["fastapi", "websocket", "realtime", "async"],
+    "languages": ["python"],
+    "error_patterns": ["WebSocket connection failed", "cannot connect to websocket", "WebSocketDisconnect", "1006"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use `@app.websocket('/ws')` decorator",
+      "2. Accept connection: `await websocket.accept()`",
+      "3. Handle in try/except: `WebSocketDisconnect`",
+      "4. Use `asyncio.gather()` for concurrent send/receive",
+      "5. Use `websocket_manager` pattern for broadcast",
+      "6. Handle disconnect gracefully in cleanup"
+    ],
+    "code_example": "@app.websocket('/ws/{client_id}')\nasync def websocket_endpoint(websocket: WebSocket, client_id: str):\n    await websocket.accept()\n    try:\n        while True:\n            data = await websocket.receive_text()\n            await websocket.send_text(f'echo: {data}')\n    except WebSocketDisconnect:\n        print(f'{client_id} disconnected')",
+    "related_topics": ["FastAPI", "WebSocket", "realtime", "async"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: N+1 query problem in ORM",
+    "tags": ["django", "ORM", "performance", "N+1"],
+    "languages": ["python"],
+    "error_patterns": ["N+1 queries", "many queries", "select_related", "prefetch_related"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use `select_related()` for ForeignKey/OneToOne relationships (SQL JOIN)",
+      "2. Use `prefetch_related()` for ManyToMany/Reverse ForeignKey (two queries)",
+      "3. Use `only()` / `defer()` to select only needed columns",
+      "4. Use `django-debug-toolbar` to identify N+1 queries",
+      "5. Use `Prefetch` object for advanced prefetch filtering"
+    ],
+    "code_example": "# N+1: queries once for authors, then N times for books\nfor author in Author.objects.all():\n    author.books.all()\n\n# Optimized: 2 queries\nfrom django.db.models import Prefetch\nauthors = Author.objects.prefetch_related(\n    Prefetch('books', queryset=Book.objects.filter(published=True))\n)\nfor author in authors:\n    author.books.all()  # No extra queries",
+    "related_topics": ["Django", "ORM", "performance", "N+1", "optimization"],
+    "source": "curated"
+  },
+  {
+    "title": "Flask: template not found / Jinja2 errors",
+    "tags": ["flask", "jinja2", "template", "render"],
+    "languages": ["python", "html"],
+    "error_patterns": ["TemplateNotFound", "jinja2\\.exceptions\\.TemplateNotFound", "TemplateSyntaxError", "UndefinedError"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Check template path (default: `templates/` folder in app root)",
+      "2. Use absolute path for custom template folder",
+      "3. Use `render_template('folder/template.html')` with subfolder support",
+      "4. For syntax errors, Jinja2 shows line number",
+      "5. Use `{% raw %}` for literal Jinja2 delimiters",
+      "6. Use `template_filter` for custom Jinja2 filters"
+    ],
+    "code_example": "from flask import Flask, render_template\napp = Flask(__name__, template_folder='my_templates')\n\n@app.route('/')\ndef index():\n    return render_template('index.html', name='World')",
+    "related_topics": ["Flask", "Jinja2", "templates", "rendering"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: background tasks and lifespan",
+    "tags": ["fastapi", "background tasks", "lifespan", "startup"],
+    "languages": ["python"],
+    "error_patterns": ["background task not running", "lifespan", "startup/shutdown", "BackgroundTasks are not awaited"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `BackgroundTasks` for lightweight post-response tasks",
+      "2. Use `lifespan` context manager for startup/shutdown",
+      "3. Use `asyncio.create_task()` for fire-and-forget in lifespan",
+      "4. Use Celery/ARQ for heavy background processing",
+      "5. Background tasks run after response is sent (no access to request)",
+      "6. Use `@app.on_event(\"startup\")` (deprecated) or `lifespan`"
+    ],
+    "code_example": "from contextlib import asynccontextmanager\n\n@asynccontextmanager\nasync def lifespan(app: FastAPI):\n    # Startup\n    await db.connect()\n    yield\n    # Shutdown\n    await db.disconnect()\n\napp = FastAPI(lifespan=lifespan)",
+    "related_topics": ["FastAPI", "background tasks", "lifespan", "startup/shutdown"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: static files not loading in production",
+    "tags": ["django", "static files", "production", "deployment"],
+    "languages": ["python"],
+    "error_patterns": ["static files not found", "404 static", "STATIC_ROOT", "STATICFILES_DIRS", "whitenoise"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Set `STATIC_ROOT = BASE_DIR / 'staticfiles'`",
+      "2. Run: `python manage.py collectstatic`",
+      "3. Add `whitenoise` to middleware for serving static files",
+      "4. Set `STATIC_URL = '/static/'`",
+      "5. Add `django.contrib.staticfiles` to INSTALLED_APPS",
+      "6. Use `{% load static %}` and `{% static 'path' %}` in templates",
+      "7. For S3: use `django-storages`"
+    ],
+    "code_example": "MIDDLEWARE = [\n    'django.middleware.security.SecurityMiddleware',\n    'whitenoise.middleware.WhiteNoiseMiddleware',  # After SecurityMiddleware\n    ...\n]\nSTATIC_ROOT = BASE_DIR / 'staticfiles'\nSTATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'",
+    "related_topics": ["Django", "static files", "whitenoise", "deployment"],
+    "source": "curated"
+  },
+  {
+    "title": "SQLAlchemy: dialect and driver not installed",
+    "tags": ["python", "sqlalchemy", "database", "driver"],
+    "languages": ["python"],
+    "error_patterns": ["NoSuchModuleError: Can't load plugin", "sqlalchemy\\.exc\\.NoSuchModuleError", "dialect", "driver not installed"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Install required driver for your database",
+      "2. PostgreSQL: `pip install psycopg2-binary` or `asyncpg`",
+      "3. MySQL: `pip install pymysql` or `mysqlclient`",
+      "4. SQLite: built-in (no extra install)",
+      "5. Oracle: `pip install cx_oracle`",
+      "6. Check connection URL format: `dialect+driver://user:pass@host/db`"
+    ],
+    "code_example": "# PostgreSQL async\nfrom sqlalchemy.ext.asyncio import create_async_engine\nengine = create_async_engine(\n    'postgresql+asyncpg://user:pass@localhost:5432/mydb'\n)\n\n# MySQL sync\nengine = create_engine('mysql+pymysql://user:pass@localhost/mydb')",
+    "related_topics": ["SQLAlchemy", "database drivers", "connection URL", "asyncpg"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: dependency caching and re-use",
+    "tags": ["fastapi", "dependency", "caching", "performance"],
+    "languages": ["python"],
+    "error_patterns": ["dependency called multiple times", "request scope", "Depends caching", "singleton dependency"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Dependencies are cached within the same request scope",
+      "2. Same `Depends()` call across multiple routes = separate instances",
+      "3. Use `lru_cache` on dependency factory for singleton at module level",
+      "4. Use `functools.lru_cache` for expensive dependency initialization",
+      "5. Dependencies can have their own sub-dependencies"
+    ],
+    "code_example": "from functools import lru_cache\n\n@lru_cache\ndef get_settings():\n    return Settings()  # Loaded once\n\n@app.get('/config')\ndef read_config(settings: Settings = Depends(get_settings)):\n    return settings.dict()",
+    "related_topics": ["FastAPI", "dependency injection", "caching", "singleton"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: custom user model after migration",
+    "tags": ["django", "user model", "migration", "AUTH_USER_MODEL"],
+    "languages": ["python"],
+    "error_patterns": ["AUTH_USER_MODEL", "You can't change AUTH_USER_MODEL after", "cannot add a nullable field", "already has migrations"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Set `AUTH_USER_MODEL` BEFORE first migration",
+      "2. Changing later requires database rebuild",
+      "3. If already migrated: dump data, drop DB, set model, migrate fresh",
+      "4. Create: `python manage.py startapp accounts`",
+      "5. Add to settings: `AUTH_USER_MODEL = 'accounts.CustomUser'`",
+      "6. Use `AbstractUser` or `AbstractBaseUser` for custom fields"
+    ],
+    "code_example": "# models.py\nfrom django.contrib.auth.models import AbstractUser\nclass CustomUser(AbstractUser):\n    phone_number = models.CharField(max_length=20, blank=True)\n\n# settings.py\nAUTH_USER_MODEL = 'accounts.CustomUser'\n\n# admin.py\nfrom django.contrib import admin\nfrom .models import CustomUser\nadmin.site.register(CustomUser)",
+    "related_topics": ["Django", "user model", "authentication", "migrations"],
+    "source": "curated"
+  },
+  {
+    "title": "Celery: task ETA and countdown not working",
+    "tags": ["python", "celery", "scheduling", "ETA"],
+    "languages": ["python", "bash"],
+    "error_patterns": ["ETA", "countdown not working", "task scheduled but not executed", "celery beat"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Ensure `worker` is running, not just `beat`",
+      "2. Use `apply_async(countdown=60)` or `apply_async(eta=datetime)`",
+      "3. Celery Beat for periodic tasks: `celery -A app beat`",
+      "4. Use `visibility_timeout` for long-running tasks",
+      "5. Check `task_acks_late` and `task_reject_on_worker_lost` settings",
+      "6. For scheduled tasks: `@app.on_after_configure.connect`"
+    ],
+    "code_example": "# Schedule with countdown\nadd.apply_async((4, 4), countdown=60)\n\n# Schedule with eta\nfrom datetime import datetime, timedelta\nadd.apply_async((4, 4), eta=datetime.utcnow() + timedelta(minutes=5))\n\n# Periodic task\n@app.on_after_configure.connect\ndef setup_periodic_tasks(sender, **kwargs):\n    sender.add_periodic_task(300, clean_old_records.s(), name='clean every 5 min')",
+    "related_topics": ["Celery", "scheduling", "ETA", "beat", "periodic tasks"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: file upload handling",
+    "tags": ["fastapi", "file", "upload", "multipart"],
+    "languages": ["python"],
+    "error_patterns": ["UploadFile", "file size too large", "multipart/form-data", "413 Request Entity Too Large"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `UploadFile` type for file parameters",
+      "2. Read with `await file.read()` for small files",
+      "3. Stream large files with `file.file` iterator",
+      "4. Set max size: `python-multipart` and uvicorn settings",
+      "5. Validate file type (MIME) and extension server-side",
+      "6. Save with `aiofiles.open()` for async file writing"
+    ],
+    "code_example": "from fastapi import UploadFile, File\nimport aiofiles\n\n@app.post('/upload')\nasync def upload(file: UploadFile = File(...)):\n    if not file.content_type.startswith('image/'):\n        raise HTTPException(400, 'Only images allowed')\n    async with aiofiles.open(f'uploads/{file.filename}', 'wb') as f:\n        await f.write(await file.read())\n    return {'filename': file.filename}",
+    "related_topics": ["FastAPI", "file upload", "UploadFile", "multipart"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: database connection timeout",
+    "tags": ["django", "database", "timeout", "connection pool"],
+    "languages": ["python"],
+    "error_patterns": ["timeout", "connection refused", "database connection", "OperationalError", "CONN_MAX_AGE"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Check database server is running",
+      "2. Increase `CONN_MAX_AGE` for persistent connections",
+      "3. Use connection pooling (pgbouncer for Postgres, mysql.connector pool)",
+      "4. Set `OPTIONS = {'connect_timeout': 10}` in DATABASES config",
+      "5. Check firewall and database host accessibility",
+      "6. Use `django-db-connection-pool` for pooled connections"
+    ],
+    "code_example": "DATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.postgresql',\n        'NAME': 'mydb',\n        'USER': 'user',\n        'PASSWORD': 'pass',\n        'HOST': 'db.example.com',\n        'PORT': 5432,\n        'CONN_MAX_AGE': 600,\n        'OPTIONS': {\n            'connect_timeout': 5,\n        },\n    }\n}",
+    "related_topics": ["Django", "database", "connection", "timeout", "connection pooling"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: error handling and exception middleware",
+    "tags": ["fastapi", "error handling", "exception", "middleware"],
+    "languages": ["python"],
+    "error_patterns": ["500 Internal Server Error", "unhandled exception", "raise HTTPException", "Exception middleware"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use `@app.exception_handler(HTTPException)` for HTTP errors",
+      "2. Use `@app.exception_handler(Exception)` for generic errors",
+      "3. Return structured error responses: `JSONResponse(status_code, content)`",
+      "4. Use `from starlette.exceptions import HTTPException as StarletteHTTPException`",
+      "5. Add request ID to each error for traceability",
+      "6. Log unexpected errors with traceback",
+      "7. Use `ValidationError` handler for Pydantic errors"
+    ],
+    "code_example": "from fastapi import Request, HTTPException\nfrom fastapi.responses import JSONResponse\n\n@app.exception_handler(ValueError)\nasync def value_error_handler(request: Request, exc: ValueError):\n    return JSONResponse(\n        status_code=400,\n        content={'detail': str(exc), 'type': 'validation_error'}\n    )\n\n@app.exception_handler(Exception)\nasync def unhandled_error(request: Request, exc: Exception):\n    logger.error(f'Unhandled error: {exc}', exc_info=True)\n    return JSONResponse(status_code=500, content={'detail': 'Internal error'})",
+    "related_topics": ["FastAPI", "error handling", "exception handlers", "middleware"],
+    "source": "curated"
+  },
+  {
+    "title": "SQLAlchemy: Alembic migration generation",
+    "tags": ["python", "sqlalchemy", "alembic", "migrations"],
+    "languages": ["python", "bash"],
+    "error_patterns": ["alembic", "Target database is not up to date", "Can't locate revision", "alembic revision"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Initialize: `alembic init alembic`",
+      "2. Configure `alembic.ini` with database URL",
+      "3. Set `alembic/env.py` to import Base metadata",
+      "4. Auto-generate: `alembic revision --autogenerate -m \"message\"`",
+      "5. Apply: `alembic upgrade head`",
+      "6. Rollback: `alembic downgrade -1`",
+      "7. Check history: `alembic history`"
+    ],
+    "code_example": "# alembic/env.py\nfrom app.models import Base  # Your SQLAlchemy Base\ntarget_metadata = Base.metadata\n\n# Commands\nalembic init alembic\n# Edit alembic.ini with sqlalchemy.url\nalembic revision --autogenerate -m 'create users table'\nalembic upgrade head\n# Check status\nalembic current",
+    "related_topics": ["Alembic", "migrations", "SQLAlchemy", "database versioning"],
+    "source": "curated"
+  },
+  {
+    "title": "Django: DEBUG=False static/media issues",
+    "tags": ["django", "debug", "static", "media", "production"],
+    "languages": ["python"],
+    "error_patterns": ["Invalid HTTP_HOST header", "You may need to add '.*' to ALLOWED_HOSTS", "static files 404", "media files"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Set `ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']`",
+      "2. Use `whitenoise` for static files",
+      "3. For media: configure `MEDIA_URL` and `MEDIA_ROOT`",
+      "4. Serve media files via web server (nginx, Caddy, S3) in production",
+      "5. Run `collectstatic` after any static file change",
+      "6. Use `django-storages` for cloud storage (S3, GCS, Azure)"
+    ],
+    "code_example": "ALLOWED_HOSTS = ['.example.com', 'localhost']\nSTATIC_ROOT = BASE_DIR / 'staticfiles'\nMEDIA_ROOT = BASE_DIR / 'media'\nMEDIA_URL = '/media/'\n\n# For local dev with DEBUG=False:\nfrom django.conf.urls.static import static\nurlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)",
+    "related_topics": ["Django", "production", "static files", "media", "deployment"],
+    "source": "curated"
+  },
+  {
+    "title": "FastAPI: rate limiting with slowapi",
+    "tags": ["fastapi", "rate limit", "throttle", "slowapi"],
+    "languages": ["python"],
+    "error_patterns": ["rate limit exceeded", "429 Too Many Requests", "slowapi", "limit"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Install: `pip install slowapi`",
+      "2. Add `Limiter` and `_rate_limit_exceeded_handler`",
+      "3. Decorate routes with `@limiter.limit('5/minute')`",
+      "4. Use key functions: by IP, by user, or custom",
+      "5. Store limits in memory (default) or Redis for distributed apps",
+      "6. Handle rate limit exceeded responses gracefully"
+    ],
+    "code_example": "from slowapi import Limiter, _rate_limit_exceeded_handler\nfrom slowapi.util import get_remote_address\n\nlimiter = Limiter(key_func=get_remote_address)\napp.state.limiter = limiter\napp.add_exception_handler(429, _rate_limit_exceeded_handler)\n\n@app.get('/api/items')\n@limiter.limit('10/minute')\nasync def get_items(request: Request):\n    return {'items': []}",
+    "related_topics": ["FastAPI", "rate limiting", "slowapi", "throttling"],
+    "source": "curated"
+  },
+  {
+    "title": "Django REST Framework: serialization depth",
+    "tags": ["django", "rest framework", "serializer", "nested"],
+    "languages": ["python"],
+    "error_patterns": ["RecursionError", "serialization depth", "nested serializers", "drf depth"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Set `depth = 1` in Meta class for limited nesting",
+      "2. Use `SerializerMethodField` for custom serialization",
+      "3. Use `PrimaryKeyRelatedField` (default) instead of nested",
+      "4. Create separate read/write serializers for nested data",
+      "5. Use `drf-nested-routers` for complex nested endpoints"
+    ],
+    "code_example": "class AuthorSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Author\n        fields = ['id', 'name']\n\nclass BookSerializer(serializers.ModelSerializer):\n    author = AuthorSerializer()  # Nested read\n    class Meta:\n        model = Book\n        fields = ['id', 'title', 'author']\n\nclass BookWriteSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Book\n        fields = ['id', 'title', 'author']",
+    "related_topics": ["Django REST Framework", "serializers", "nesting", "API"],
+    "source": "curated"
+  },
+  {
+    "title": "Celery: chord/callback not working",
+    "tags": ["python", "celery", "chord", "callback", "workflow"],
+    "languages": ["python", "bash"],
+    "error_patterns": ["Celery chord", "chord callback not called", "group results", "chain not working"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `group(task.s(...) for i in items) | callback.s()` for chord",
+      "2. Use `chord(group(...), callback)` for explicit chord",
+      "3. Enable `task_always_eager=False` in production",
+      "4. Use `result.get()` on group to wait for all results",
+      "5. Callback receives list of group results as argument",
+      "6. Use `chain(task1.s() | task2.s() | task3.s())` for sequential"
+    ],
+    "code_example": "from celery import chord, group\n\n@app.task\ndef process_item(item):\n    return item * 2\n\n@app.task\ndef summarize(results):\n    return sum(results)\n\n# Chord: process items, then summarize\nresult = chord(\n    group(process_item.s(i) for i in range(10)),\n    summarize.s()\n)()",
+    "related_topics": ["Celery", "chord", "group", "chain", "workflow"],
+    "source": "curated"
+  }
+]

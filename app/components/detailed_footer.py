@@ -51,7 +51,7 @@ class DetailedFooter:
         self._session_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._ram_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._os_text = ft.Text("--", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
-        self._version_text = ft.Text("v1.0.0", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
+        self._version_text = ft.Text("v1.1.0", size=11, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._notif_icon = ft.Icon(ft.Icons.NOTIFICATIONS_OUTLINED, size=14, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
 
         self._running = False

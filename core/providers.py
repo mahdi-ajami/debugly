@@ -107,15 +107,18 @@ class ProviderManager:
 
     @classmethod
     def load(cls):
-        data = db_load()
-        if data:
-            return cls.from_dict(data)
-        if PROVIDERS_FILE.exists():
-            try:
+        try:
+            data = db_load()
+            if data:
+                return cls.from_dict(data)
+        except Exception:
+            pass
+        try:
+            if PROVIDERS_FILE.exists():
                 data = json.loads(PROVIDERS_FILE.read_text(encoding="utf-8"))
                 mgr = cls.from_dict(data)
                 mgr.save()
                 return mgr
-            except (json.JSONDecodeError, KeyError):
-                pass
+        except Exception:
+            pass
         return cls()

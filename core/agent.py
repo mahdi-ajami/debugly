@@ -139,6 +139,7 @@ class DebugAgent:
 
             state.solution = final_solution
             agent_results = output.data.get("agent_results", {})
+            state.agent_results = agent_results
             if "knowledge" in agent_results:
                 state.retrieved_docs = agent_results["knowledge"]["output"].data.get("docs", [])
             if "research" in agent_results:
@@ -153,7 +154,7 @@ class DebugAgent:
             return event_stream(), state
         return state
 
-    def handle_feedback(self, arm: int, rating: int):
+    def handle_feedback(self, arm: int, rating: int, query: str = "", solution: str = ""):
         self.bandit.update(arm, reward=float(rating))
         latency = (time.time() - self._start_time) * 1000 if self._start_time else 0
         try:
@@ -161,17 +162,45 @@ class DebugAgent:
                 session_id=self._current_session_id,
                 arm=arm,
                 rating=rating,
-                error_text="",
+                error_text=query,
                 model="",
                 latency_ms=latency,
             )
         except Exception:
             pass
+        if rating == 1 and query and solution:
+            try:
+                from core.kb_manager import KbManager
+                mgr = KbManager(providers=self.providers)
+                mgr.learn_from_feedback(query, solution)
+                mgr.close()
+            except Exception as exc:
+                logger.debug("Auto-learn from feedback skipped: %s", exc)
 
     def bandit_stats(self) -> dict:
         return self.bandit.stats()
 
+    def cleanup(self):
+        import gc
+        if hasattr(self, 'rag') and self.rag:
+            self.rag.close()
+        if hasattr(self, '_orchestrator') and self._orchestrator:
+            self._orchestrator.reset()
+        try:
+            from core.hf_models import reset_hf
+            reset_hf()
+        except Exception:
+            pass
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+
     def reload_providers(self):
+        self.cleanup()
         self.providers = ProviderManager.load()
         self.vlm = VLMHandler(providers=self.providers)
         self.rag = RAGPipeline(providers=self.providers)

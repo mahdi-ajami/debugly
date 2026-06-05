@@ -102,6 +102,25 @@ class HFModels:
     def summarize_error(self, error_text: str, max_length: int = 150) -> str:
         return error_text[:max_length] + ("..." if len(error_text) > max_length else "")
 
+    def clear(self):
+        if hasattr(self, '_local_embedder') and self._local_embedder is not None:
+            try:
+                del self._local_embedder
+            except Exception:
+                pass
+            self._local_embedder = None
+        self._client = None
+        self._api = None
+        self._local_available = False
+        import gc
+        gc.collect()
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+
 
 _hf: Optional[HFModels] = None
 
@@ -117,3 +136,10 @@ def init_hf(api_token: str = ""):
     global _hf
     _hf = HFModels(api_token=api_token)
     return _hf
+
+
+def reset_hf():
+    global _hf
+    if _hf is not None:
+        _hf.clear()
+        _hf = None

@@ -3,6 +3,7 @@ import flet as ft
 from app.theme import (
     DARK_ACCENT, LIGHT_ACCENT,
     DARK_ACCENT_SUBTLE, LIGHT_ACCENT_SUBTLE,
+    DARK_ACCENT_SECONDARY, LIGHT_ACCENT_SECONDARY,
     DARK_TEXT_PRIMARY, LIGHT_TEXT_PRIMARY,
     DARK_TEXT_SECONDARY, LIGHT_TEXT_SECONDARY,
     DARK_TEXT_MUTED, LIGHT_TEXT_MUTED,
@@ -153,3 +154,111 @@ def image_preview_card(path: str, is_dark: bool = False, status: str = "pending"
         bgcolor=accent_sub,
         border=border_all(1, accent + "30"),
     )
+
+
+def image_analysis_card(data: dict, is_dark: bool = False):
+    accent = DARK_ACCENT if is_dark else LIGHT_ACCENT
+    text_p = DARK_TEXT_PRIMARY if is_dark else LIGHT_TEXT_PRIMARY
+    text_s = DARK_TEXT_SECONDARY if is_dark else LIGHT_TEXT_SECONDARY
+    text_m = DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED
+    accent_sub = DARK_ACCENT_SUBTLE if is_dark else LIGHT_ACCENT_SUBTLE
+    border = DARK_BORDER if is_dark else LIGHT_BORDER
+
+    images_list = data.get("images", []) if isinstance(data, dict) else data
+    analyses = data.get("analyses", {}) if isinstance(data, dict) else {}
+
+    if not images_list and not analyses:
+        return ft.Container()
+
+    analysis_cards = []
+    for img_path in images_list:
+        fname = img_path.split("\\")[-1]
+        vlm = analyses.get(img_path, {})
+        summary = (vlm.get("summary") or "").strip()
+        extracted = (vlm.get("extracted") or "").strip()
+        err_type = vlm.get("type", "Unknown")
+        language = vlm.get("language", "Unknown")
+        severity = vlm.get("severity", "Medium")
+        context_type = vlm.get("context", "Other")
+
+        sev_color = {"Critical": "#EF4444", "High": "#F59E0B", "Medium": "#60A5FA", "Low": "#9CA3AF"}.get(severity, "#9CA3AF")
+        type_color = DANGER if err_type not in ("Unknown",) else accent
+
+        badges = ft.Row([
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=9, color=ft.Colors.WHITE),
+                    ft.Text(err_type, size=7, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ], spacing=2),
+                padding=padding_symmetric(horizontal=5, vertical=2), border_radius=3, bgcolor=type_color,
+            ),
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.CODE, size=9, color=ft.Colors.WHITE),
+                    ft.Text(language, size=7, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ], spacing=2),
+                padding=padding_symmetric(horizontal=5, vertical=2), border_radius=3, bgcolor=accent,
+            ),
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.SPEED, size=9, color=ft.Colors.WHITE),
+                    ft.Text(severity, size=7, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ], spacing=2),
+                padding=padding_symmetric(horizontal=5, vertical=2), border_radius=3, bgcolor=sev_color,
+            ),
+            ft.Container(
+                content=ft.Row([
+                    ft.Icon(ft.Icons.DEVICES, size=9, color=ft.Colors.WHITE),
+                    ft.Text(context_type, size=7, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ], spacing=2),
+                padding=padding_symmetric(horizontal=5, vertical=2), border_radius=3,
+                bgcolor=DARK_ACCENT_SECONDARY if is_dark else LIGHT_ACCENT_SECONDARY,
+            ),
+        ], spacing=3, wrap=True)
+
+        extracted_preview = ft.Container(
+            content=ft.Text(extracted[:200] + ("..." if len(extracted) > 200 else ""),
+                            size=9, color=text_s, font_family="monospace"),
+            padding=padding_symmetric(horizontal=6, vertical=4),
+            border_radius=4, bgcolor=accent_sub,
+            visible=bool(extracted),
+        )
+
+        card = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Image(src=img_path, width=64, height=48, fit=ft.BoxFit.COVER, border_radius=6),
+                    ft.Column([
+                        ft.Text(fname, size=10, weight=ft.FontWeight.W_500, color=text_p),
+                        badges,
+                    ], spacing=2, expand=1),
+                ], spacing=6, vertical_alignment=ft.CrossAxisAlignment.START),
+                extracted_preview,
+                ft.Container(
+                    content=ft.Text(summary or "No summary", size=9, color=text_s),
+                    visible=bool(summary),
+                ),
+            ], spacing=4),
+            padding=8,
+            border_radius=6,
+            bgcolor=accent_sub,
+            border=border_all(0.5, border),
+        )
+        analysis_cards.append(card)
+
+    return ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Icon(ft.Icons.IMAGE_SEARCH, size=14, color=accent),
+                ft.Text("Screenshot Analysis", size=11, weight=ft.FontWeight.W_600, color=text_p, expand=1),
+                ft.Text(f"{len(images_list)} image{'s' if len(images_list) != 1 else ''}", size=9, color=text_m),
+            ], spacing=4),
+            ft.Column(analysis_cards, spacing=6),
+        ], spacing=4),
+        padding=10,
+        border_radius=8,
+        bgcolor=DARK_BG_SURFACE if is_dark else LIGHT_BG_SURFACE,
+        border=border_all(0.5, border),
+        margin=ft.Margin(left=26, top=4, right=0, bottom=4),
+    )
+

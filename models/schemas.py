@@ -34,6 +34,7 @@ class AgentState(BaseModel):
     guardrails_passed: bool = True
     guardrail_message: str = ""
     error: str = ""
+    agent_results: dict = Field(default_factory=dict)
 
 
 class AgentResult(BaseModel):

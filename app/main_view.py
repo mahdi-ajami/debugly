@@ -29,6 +29,7 @@ from app.views.debug_view import DebugView
 from app.views.history_view import history_view
 from app.views.settings_view import settings_view
 from app.views.kb_view import kb_view
+from core.kb_manager import KbManager
 
 SIDEBAR_WIDTH = 260
 
@@ -38,6 +39,12 @@ class MainView:
         providers = ProviderManager.load()
         self.agent = DebugAgent(providers=providers)
         self.project_mgr = ProjectManager()
+        try:
+            mgr = KbManager(providers=providers)
+            mgr.ensure_seeded()
+            mgr.close()
+        except Exception as exc:
+            logger.debug("KbManager seeding skipped: %s", exc)
         self.project = self.project_mgr.get_or_create_default()
         self._current_session: Session | None = None
         self.page = None
@@ -587,4 +594,4 @@ class MainView:
         )
 
     def _kb(self):
-        return kb_view(is_dark=self._is_dark, page=self.page)
+        return kb_view(is_dark=self._is_dark, page=self.page, providers=self.agent.providers)

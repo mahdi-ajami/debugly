@@ -1,0 +1,740 @@
+[
+  {
+    "title": "Circular import in Python modules",
+    "tags": ["python", "import", "circular", "dependency"],
+    "languages": ["python"],
+    "error_patterns": ["cannot import name", "circular import", "importerror cannot import name from partially initialized module"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Move imports inside functions (lazy import)",
+      "2. Restructure code into three-tier architecture (models, services, utils)",
+      "3. Use `import module` instead of `from module import name`",
+      "4. Create a shared third module for common dependencies",
+      "5. Use `TYPE_CHECKING` for type annotations only"
+    ],
+    "code_example": "# Instead of: from a import B (at top-level)\ndef my_func():\n    from a import B  # lazy import\n    return B()",
+    "related_topics": ["module system", "design patterns", "TYPE_CHECKING", "lazy imports"],
+    "source": "curated"
+  },
+  {
+    "title": "Mutable default argument pitfall",
+    "tags": ["python", "functions", "mutability", "gotcha"],
+    "languages": ["python"],
+    "error_patterns": ["unexpected behavior with default", "mutable default argument", "list default parameter"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use None as default, create mutable inside function",
+      "2. Never use `[]`, `{}`, or `set()` as default argument values",
+      "3. Document that a new mutable is created each call"
+    ],
+    "code_example": "# Wrong: def add(item, items=[]):\ndef add(item, items=None):\n    if items is None:\n        items = []\n    items.append(item)\n    return items",
+    "related_topics": ["default arguments", "mutability", "function design"],
+    "source": "curated"
+  },
+  {
+    "title": "NameError: name not defined",
+    "tags": ["python", "scope", "name"],
+    "languages": ["python"],
+    "error_patterns": ["NameError: name .* is not defined"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Check variable/function name spelling",
+      "2. Verify the name is defined before usage",
+      "3. Check import statements",
+      "4. Check scope (variable defined inside a function but used outside)",
+      "5. Use a linter to catch undefined names"
+    ],
+    "code_example": "def main():\n    x = 10\n    print(x)  # Works\nprint(x)  # NameError: x is not defined (out of scope)",
+    "related_topics": ["scope", "imports", "linting", "variable hoisting"],
+    "source": "curated"
+  },
+  {
+    "title": "Python asyncio: event loop is closed",
+    "tags": ["python", "asyncio", "async", "event loop"],
+    "languages": ["python"],
+    "error_patterns": ["event loop is closed", "Event loop is closed", "RuntimeError: Cannot close a running event loop"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Don't close the event loop manually",
+      "2. Use `asyncio.run()` which handles create/close automatically",
+      "3. In Jupyter, nest_asyncio.apply() to allow nested event loops",
+      "4. Check for multiple asyncio.run() calls",
+      "5. For pytest, install `pytest-asyncio`",
+      "6. Use `asyncio.get_running_loop()` instead of `get_event_loop()`"
+    ],
+    "code_example": "import asyncio\nasync def main():\n    await asyncio.sleep(1)\n    print('done')\nasyncio.run(main())  # Proper way",
+    "related_topics": ["asyncio", "event loop", "async/await", "Jupyter"],
+    "source": "curated"
+  },
+  {
+    "title": "Memory leak from global variables",
+    "tags": ["python", "memory", "global", "performance"],
+    "languages": ["python"],
+    "error_patterns": ["MemoryError", "memory leak", "out of memory"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Use local variables instead of globals",
+      "2. Delete large objects when done: `del obj`",
+      "3. Use generators for large datasets",
+      "4. Profile memory with `memory_profiler`",
+      "5. Use `gc.collect()` to force garbage collection",
+      "6. Consider using `weakref` for caches"
+    ],
+    "code_example": "import gc\nlarge_data = load_huge_file()\nprocess(large_data)\ndel large_data\ngc.collect()",
+    "related_topics": ["garbage collection", "memory profiling", "generators", "weakref"],
+    "source": "curated"
+  },
+  {
+    "title": "Python multiprocessing: pickling errors",
+    "tags": ["python", "multiprocessing", "pickle", "parallel"],
+    "languages": ["python"],
+    "error_patterns": ["PicklingError", "Can't pickle", "AttributeError: Can't pickle local object", "cannot pickle"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use `multiprocessing` with top-level functions (not lambdas or closures)",
+      "2. Use `cloudpickle` for complex objects",
+      "3. Use `multiprocessing.get_context('spawn')` on Unix",
+      "4. Avoid passing methods as arguments",
+      "5. Use `pathos.multiprocessing` for better serialization"
+    ],
+    "code_example": "from multiprocessing import Pool\ndef work(x):\n    return x * 2\nwith Pool(4) as p:\n    results = p.map(work, [1, 2, 3])",
+    "related_topics": ["multiprocessing", "pickle", "cloudpickle", "parallelism"],
+    "source": "curated"
+  },
+  {
+    "title": "Python path issues: ModuleNotFoundError in packages",
+    "tags": ["python", "import", "path", "package", "sys.path"],
+    "languages": ["python"],
+    "error_patterns": ["No module named", "ModuleNotFoundError", "ImportError: attempted relative import with no known parent package"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Run from package root directory",
+      "2. Install package in editable mode: `pip install -e .`",
+      "3. Use absolute imports in packages",
+      "4. Check `sys.path` for the correct root",
+      "5. Use `python -m package.module` instead of `python module.py`",
+      "6. Add `__init__.py` to all package directories"
+    ],
+    "code_example": "# Run as: python -m mypackage.main\n# In mypackage/__init__.py (can be empty)\nimport sys\nsys.path.insert(0, str(Path(__file__).parent.parent))",
+    "related_topics": ["sys.path", "packages", "__init__.py", "editable installs"],
+    "source": "curated"
+  },
+  {
+    "title": "Floating point precision issues",
+    "tags": ["python", "float", "decimal", "precision"],
+    "languages": ["python", "javascript", "go", "rust"],
+    "error_patterns": ["0\\.10000000000000001", "floating point error", "rounding error", "unexpected decimal"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `decimal.Decimal` for monetary calculations",
+      "2. Use `round()` with appropriate precision",
+      "3. Use `math.isclose()` for float comparisons",
+      "4. Use integer arithmetic (cents instead of dollars)",
+      "5. Use `fractions.Fraction` for exact rational arithmetic"
+    ],
+    "code_example": "from decimal import Decimal\nDecimal('0.1') + Decimal('0.2')  # Exactly 0.3\nimport math\nmath.isclose(0.1 + 0.2, 0.3, rel_tol=1e-9)",
+    "related_topics": ["decimal", "math.isclose", "fractions", "IEEE 754"],
+    "source": "curated"
+  },
+  {
+    "title": "Shallow vs deep copy confusion",
+    "tags": ["python", "copy", "reference", "mutability"],
+    "languages": ["python"],
+    "error_patterns": ["unexpected mutation", "copy modified original", "shallow copy", "deep copy"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `copy.copy()` for shallow copy (one level, immutable elements)",
+      "2. Use `copy.deepcopy()` for fully independent copies",
+      "3. For lists: `original[:]` or `list(original)` for shallow copy",
+      "4. For dicts: `original.copy()` or `dict(original)` for shallow copy",
+      "5. Understand that shallow copy shares references to nested objects"
+    ],
+    "code_example": "import copy\noriginal = {'a': [1, 2, 3], 'b': 10}\nshallow = copy.copy(original)\nshallow['a'].append(4)  # Modifies original too!\ndeep = copy.deepcopy(original)\ndeep['a'].append(5)  # Original unchanged",
+    "related_topics": ["copy module", "references", "mutability", "data structures"],
+    "source": "curated"
+  },
+  {
+    "title": "String encoding issues (UnicodeDecodeError)",
+    "tags": ["python", "encoding", "unicode", "utf-8"],
+    "languages": ["python", "javascript"],
+    "error_patterns": ["UnicodeDecodeError", "UnicodeEncodeError", "'utf-8' codec can't decode", "'charmap' codec can't encode"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Specify encoding when opening files: `open(path, 'r', encoding='utf-8')`",
+      "2. Use `encoding='utf-8-sig'` for files with BOM",
+      "3. Handle decode errors: `errors='replace'` or `errors='ignore'`",
+      "4. Detect encoding with `chardet` library",
+      "5. Use `str.encode()` with error handling for console output"
+    ],
+    "code_example": "with open('file.txt', 'r', encoding='utf-8', errors='replace') as f:\n    content = f.read()",
+    "related_topics": ["unicode", "encoding", "chardet", "file I/O"],
+    "source": "curated"
+  },
+  {
+    "title": "Global Interpreter Lock (GIL) issues",
+    "tags": ["python", "threading", "performance", "GIL"],
+    "languages": ["python"],
+    "error_patterns": ["slow multithreading", "GIL", "threading doesn't speed up", "CPU-bound"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `multiprocessing` for CPU-bound tasks",
+      "2. Use `asyncio` for I/O-bound tasks",
+      "3. Use C extensions (numpy, Cython) that release GIL",
+      "4. Use `concurrent.futures.ProcessPoolExecutor`",
+      "5. Consider alternative Python implementations (Jython, IronPython)"
+    ],
+    "code_example": "from concurrent.futures import ProcessPoolExecutor\nwith ProcessPoolExecutor() as executor:\n    results = list(executor.map(cpu_intensive, data))",
+    "related_topics": ["GIL", "multiprocessing", "asyncio", "concurrency"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: yield from vs yield confusion",
+    "tags": ["python", "generator", "yield"],
+    "languages": ["python"],
+    "error_patterns": ["yield from", "generator didn't yield", "unexpected generator behavior"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `yield` produces a single value",
+      "2. `yield from` delegates to a subgenerator",
+      "3. Do not `return` values from generators (use `StopIteration(value)` or Python 3.7+ `return value`)",
+      "4. Use `yield from` to flatten nested generators"
+    ],
+    "code_example": "def main_gen():\n    yield 'start'\n    yield from sub_gen()  # Delegates\n    yield 'end'\ndef sub_gen():\n    for i in range(3):\n        yield i",
+    "related_topics": ["generators", "coroutines", "iterators"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: virtual environment activation failures",
+    "tags": ["python", "virtualenv", "venv", "environment"],
+    "languages": ["python"],
+    "error_patterns": ["No module named 'pip'", "activate is not recognized", "virtual environment is not activated"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Create: `python -m venv .venv`",
+      "2. Activate on Windows: `.venv\\Scripts\\activate`",
+      "3. Activate on Linux/Mac: `source .venv/bin/activate`",
+      "4. Upgrade pip: `python -m pip install --upgrade pip`",
+      "5. Install from requirements: `pip install -r requirements.txt`",
+      "6. Deactivate: `deactivate`"
+    ],
+    "code_example": "# Windows PowerShell\n.venv\\Scripts\\Activate.ps1\npip install -r requirements.txt\n# Check Python path\npython -c \"import sys; print(sys.executable)\"",
+    "related_topics": ["virtualenv", "pip", "Powershell", "Python installation"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: queue.Empty in multithreading",
+    "tags": ["python", "queue", "threading", "synchronization"],
+    "languages": ["python"],
+    "error_patterns": ["queue.Empty", "Empty: ", "task_done() called too many times"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `queue.get(timeout=seconds)` instead of bare `queue.get()`",
+      "2. Always call `task_done()` for each `get()`",
+      "3. Use `queue.get_nowait()` with try/except queue.Empty",
+      "4. Ensure consumer/producer counts match",
+      "5. Use sentinel values to signal shutdown"
+    ],
+    "code_example": "import queue\ntry:\n    item = task_queue.get(timeout=5.0)\n    task_queue.task_done()\nexcept queue.Empty:\n    print('No task available within timeout')",
+    "related_topics": ["queue", "threading", "producer-consumer", "synchronization"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: pandas SettingWithCopyWarning",
+    "tags": ["python", "pandas", "dataframe", "slice"],
+    "languages": ["python"],
+    "error_patterns": ["SettingWithCopyWarning", "A value is trying to be set on a copy of a slice from a DataFrame"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `.loc[row_indexer, col_indexer] = value`",
+      "2. Use `.copy()` to make explicit copies",
+      "3. Chain operations carefully",
+      "4. Disable warning: `pd.options.mode.chained_assignment = None`",
+      "5. Use `df.assign()` or `df.replace()` for safe transformations"
+    ],
+    "code_example": "import pandas as pd\ndf = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})\n# Instead of: df[df.A > 1]['B'] = 10\ndf.loc[df.A > 1, 'B'] = 10\n# Or copy first\nsubset = df[df.A > 1].copy()",
+    "related_topics": ["pandas", "data science", "data manipulation"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: coroutine never awaited warning",
+    "tags": ["python", "asyncio", "coroutine", "async"],
+    "languages": ["python"],
+    "error_patterns": ["coroutine .* was never awaited", "RuntimeWarning: coroutine", "was never awaited"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Add `await` before the async function call",
+      "2. Ensure the caller function is `async def`",
+      "3. Use `asyncio.run()` or `asyncio.create_task()`",
+      "4. Check for missing `await` in higher-level callers",
+      "5. Don't forget `await` when calling async context managers"
+    ],
+    "code_example": "async def fetch_data():\n    return {'key': 'value'}\n# Wrong: result = fetch_data()\nresult = await fetch_data()  # Correct",
+    "related_topics": ["asyncio", "async/await", "coroutines", "event loop"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: DeprecationWarning for old APIs",
+    "tags": ["python", "deprecation", "upgrade", "compatibility"],
+    "languages": ["python"],
+    "error_patterns": ["DeprecationWarning", "deprecated", "removed in Python"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Read the warning message for the replacement API",
+      "2. Update code to use the new API",
+      "3. Use `warnings.filterwarnings('ignore')` temporarily (not recommended)",
+      "4. Use `from __future__ import annotations` for delayed eval",
+      "5. Run `pip list --outdated` to check library versions"
+    ],
+    "code_example": "import warnings\nwarnings.filterwarnings('ignore', category=DeprecationWarning)\n# Better: update your code",
+    "related_topics": ["warnings", "API migration", "compatibility", "future imports"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: sys.setrecursionlimit and stack overflow",
+    "tags": ["python", "recursion", "stack", "overflow"],
+    "languages": ["python"],
+    "error_patterns": ["Process finished with exit code -1073741571", "Fatal Python error", "Stack overflow", "RecursionError"],
+    "severity": "critical",
+    "solution_steps": [
+      "1. Use iteration instead of recursion for deep operations",
+      "2. Use `sys.setrecursionlimit(5000)` cautiously",
+      "3. Use tail-recursion optimization libraries (e.g., `tail-recursive`)",
+      "4. Use `os.sys.setrecursionlimit()` only as last resort",
+      "5. Consider async iteration for deeply nested processing"
+    ],
+    "code_example": "import sys\nsys.setrecursionlimit(10000)\ndef traverse(node):\n    while node:\n        print(node.val)\n        node = node.next",
+    "related_topics": ["recursion", "stack overflow", "iteration", "sys"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: file not flushed before read",
+    "tags": ["python", "file", "flush", "buffering"],
+    "languages": ["python"],
+    "error_patterns": ["file is empty", "buffered writes", "content not written", "no data in file"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `with open(...)` context for auto-close/flush",
+      "2. Call `file.flush()` before reading in same process",
+      "3. Use `file.close()` which also flushes",
+      "4. Set `buffering=0` for unbuffered writes (slow)",
+      "5. Use `os.fsync(f.fileno())` for physical disk sync"
+    ],
+    "code_example": "with open('out.txt', 'w') as f:\n    f.write('hello')\n# File auto-flushed and closed here\nwith open('out.txt', 'r') as f:\n    print(f.read())",
+    "related_topics": ["file I/O", "buffering", "context managers", "flush"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: unittest mock not patching correctly",
+    "tags": ["python", "testing", "mock", "patch"],
+    "languages": ["python"],
+    "error_patterns": ["AssertionError: Expected mock to have been called", "Mock object is not callable", "patch didn't work"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Patch where the name is LOOKED UP, not where it's defined",
+      "2. Use `@patch('module.ClassName.method')` correct import path",
+      "3. Ensure patch decorator order is reversed (bottom-up)",
+      "4. Use `assert_called_once_with()`, `assert_any_call()`",
+      "5. Use `side_effect` for dynamic return values",
+      "6. Check `return_value` vs `side_effect` usage"
+    ],
+    "code_example": "from unittest.mock import patch\n# Patch where it's used: 'myapp.redis_client.get'\nwith patch('myapp.redis_client.get', return_value='cached'):\n    result = myapp.get_data()",
+    "related_topics": ["unittest", "mock", "pytest", "monkeypatch"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: relative imports in scripts vs packages",
+    "tags": ["python", "import", "relative", "package"],
+    "languages": ["python"],
+    "error_patterns": ["attempted relative import with no known parent package", "SystemError: Parent module not loaded"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use absolute imports inside packages",
+      "2. Add top-level package to sys.path: `sys.path.insert(0, '..')`",
+      "3. Run module with `-m` flag: `python -m package.module`",
+      "4. Restructure as proper installable package with `setup.py`",
+      "5. Never mix relative imports with script execution"
+    ],
+    "code_example": "# package/__init__.py\nfrom .submodule import my_func",
+    "related_topics": ["import system", "packages", "sys.path", "-m flag"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: bytes vs str confusion",
+    "tags": ["python", "bytes", "string", "encoding"],
+    "languages": ["python"],
+    "error_patterns": ["a bytes-like object is required, not 'str'", "Can't concat str to bytes", "TypeError: argument should be integer or bytes-like object"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Always decode bytes to str: `data.decode('utf-8')`",
+      "2. Always encode str to bytes: `text.encode('utf-8')`",
+      "3. Use `io.TextIOWrapper` for text mode on binary streams",
+      "4. Use `open()` with text mode (default, 'r') vs binary mode ('rb')",
+      "5. Use `f-string` only on decoded strings"
+    ],
+    "code_example": "data = b'hello'\ntext = data.decode('utf-8')  # bytes -> str\noutput = text.encode('utf-8')  # str -> bytes",
+    "related_topics": ["bytes", "str", "encoding", "binary data"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: subprocess.Popen deadlocks",
+    "tags": ["python", "subprocess", "deadlock", "pipe"],
+    "languages": ["python"],
+    "error_patterns": ["subprocess hangs", "deadlock", "Popen", "stdout pipe full"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Use `subprocess.run()` with `capture_output=True` instead of Popen",
+      "2. Use `p.communicate()` on Popen objects to read both stdout/stderr",
+      "3. Use `stdin=subprocess.PIPE` only when needed",
+      "4. Read from pipes before waiting",
+      "5. For large output: redirect to temp files"
+    ],
+    "code_example": "import subprocess\nresult = subprocess.run(\n    ['python', '-c', 'print(\"hello\")'],\n    capture_output=True,\n    text=True,\n    timeout=30\n)\nprint(result.stdout)",
+    "related_topics": ["subprocess", "pipes", "deadlock", "process management"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: overriding __init__ without super()",
+    "tags": ["python", "inheritance", "super", "OOP"],
+    "languages": ["python"],
+    "error_patterns": ["__init__ not called", "parent __init__", "super().__init__", "MRO"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Always call `super().__init__(*args)` in child class __init__",
+      "2. Use `super()` for cooperative multiple inheritance",
+      "3. Understand MRO (Method Resolution Order): `ClassName.__mro__`",
+      "4. Pass proper arguments to parent __init__",
+      "5. Use `*args, **kwargs` for flexible inheritance chains"
+    ],
+    "code_example": "class Child(Parent):\n    def __init__(self, x, y):\n        super().__init__(x)\n        self.y = y",
+    "related_topics": ["inheritance", "super", "MRO", "OOP"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: classmethod vs staticmethod",
+    "tags": ["python", "classmethod", "staticmethod", "decorator"],
+    "languages": ["python"],
+    "error_patterns": ["missing required positional argument", "self", "classmethod", "staticmethod"],
+    "severity": "low",
+    "solution_steps": [
+      "1. `@classmethod` receives `cls` and can access/modify class state",
+      "2. `@staticmethod` receives no implicit first argument (like a plain function)",
+      "3. `@classmethod` is used for alternative constructors: `cls()`",
+      "4. `@staticmethod` is used for utility functions related to the class"
+    ],
+    "code_example": "class MyClass:\n    @classmethod\n    def create(cls, name):\n        return cls(name=name)\n    @staticmethod\n    def helper(x):\n        return x * 2",
+    "related_topics": ["decorators", "class methods", "OOP", "factory methods"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: logging module not writing to file",
+    "tags": ["python", "logging", "debugging", "configuration"],
+    "languages": ["python"],
+    "error_patterns": ["no logs", "logging not working", "log file is empty", "logger"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Set `logging.basicConfig(level=logging.DEBUG)` before any loggers",
+      "2. Add FileHandler: `logging.FileHandler('app.log')`",
+      "3. Add Formatter for consistent format",
+      "4. Use `logging.getLogger(__name__)` per module",
+      "5. Check level hierarchy: DEBUG < INFO < WARNING < ERROR < CRITICAL",
+      "6. Check for duplicate handlers (apply logging.getLogger().handlers check)"
+    ],
+    "code_example": "import logging\nlogging.basicConfig(\n    level=logging.DEBUG,\n    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',\n    filename='app.log',\n    filemode='w'\n)\nlogger = logging.getLogger(__name__)\nlogger.debug('Debug message')",
+    "related_topics": ["logging", "debugging", "configuration", "handlers"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: datetime vs timezone pitfalls",
+    "tags": ["python", "datetime", "timezone", "date"],
+    "languages": ["python"],
+    "error_patterns": ["naive datetime", "astimezone()", "datetime.now()", "timezone aware"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `datetime.now(timezone.utc)` instead of `datetime.now()`",
+      "2. Use `pytz` or `zoneinfo` (Python 3.9+) for timezones",
+      "3. Store dates as UTC, convert to local for display",
+      "4. Use `datetime.replace(tzinfo=timezone.utc)` to mark UTC",
+      "5. Use `dateutil.parser` for flexible date string parsing"
+    ],
+    "code_example": "from datetime import datetime, timezone\nutc_now = datetime.now(timezone.utc)\nfrom zoneinfo import ZoneInfo\nlocal = utc_now.astimezone(ZoneInfo('America/New_York'))",
+    "related_topics": ["datetime", "timezone", "pytz", "dateutil"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: try/except too broad",
+    "tags": ["python", "exception", "debugging", "best practice"],
+    "languages": ["python"],
+    "error_patterns": ["except: pass", "bare except", "swallowed exception", "silent failure"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Always specify exception types: `except ValueError:`",
+      "2. Never use bare `except:` (catches KeyboardInterrupt, SystemExit too)",
+      "3. Use `except Exception as e:` for broad but not system-exiting exceptions",
+      "4. Log or re-raise when catching broadly",
+      "5. Use `finally` for cleanup code",
+      "6. Use `else` block for code that runs only if no exception"
+    ],
+    "code_example": "try:\n    risky_operation()\nexcept ValueError as e:\n    logger.error(f'ValueError: {e}')\n    raise\nexcept Exception as e:\n    logger.error(f'Unexpected error: {e}')\nelse:\n    print('Success')\nfinally:\n    cleanup()",
+    "related_topics": ["exception handling", "try/except", "logging", "best practices"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: list comprehension leaks in Python 2 (or using wrong comprehension)",
+    "tags": ["python", "list comprehension", "scope", "comprehension"],
+    "languages": ["python"],
+    "error_patterns": ["loop variable leak", "comprehension variable", "last value in comprehension"],
+    "severity": "low",
+    "solution_steps": [
+      "1. In Python 3, comprehension variables don't leak to outer scope",
+      "2. Use generator expressions for large data: `(x for x in big)`",
+      "3. Use `dict` comprehension: `{k: v for k, v in pairs}`",
+      "4. Use `set` comprehension: `{x for x in items}`",
+      "5. Nest comprehensions carefully (max 2-3 levels)"
+    ],
+    "code_example": "squares = [x**2 for x in range(10)]  # x doesn't leak in Python 3\neven_squares = [x**2 for x in range(10) if x % 2 == 0]\nmatrix = [[i*j for j in range(5)] for i in range(5)]",
+    "related_topics": ["comprehensions", "generators", "scope", "functional"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: protocol/buffer interface errors",
+    "tags": ["python", "protocol", "buffer", "memoryview"],
+    "languages": ["python"],
+    "error_patterns": ["object does not support the buffer interface", "buffer protocol", "memoryview"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `memoryview(obj)` for objects that support buffer protocol",
+      "2. Convert to bytes: `bytes(obj)` before passing to buffer-expected APIs",
+      "3. Use `io.BytesIO` for in-memory binary streams",
+      "4. Check if type supports buffer protocol via `type(obj).__buffer__`",
+      "5. For numpy arrays: use `np.ndarray.tobytes()`"
+    ],
+    "code_example": "data = io.BytesIO()\ndata.write(b'hello')\nvalue = data.getvalue()\n# memoryview for array-like access\narr = bytearray([1, 2, 3])\nmv = memoryview(arr)",
+    "related_topics": ["buffer", "memoryview", "bytes", "binary protocols"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: for-else loop confusion",
+    "tags": ["python", "for loop", "else", "control flow"],
+    "languages": ["python"],
+    "error_patterns": ["else runs after for", "for else unexpected", "loop else"],
+    "severity": "low",
+    "solution_steps": [
+      "1. `else` block runs when loop completes normally (no `break`)",
+      "2. `else` does NOT run if loop is terminated by `break`",
+      "3. `else` runs even if the iterable is empty",
+      "4. Useful for search loops: if no `break`, item not found",
+      "5. Similar for `while-else`"
+    ],
+    "code_example": "for item in items:\n    if matches(item):\n        print('Found:', item)\n        break\nelse:\n    print('Not found')  # Runs only if no break",
+    "related_topics": ["for loop", "else clause", "control flow", "search patterns"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: property decorator with setter",
+    "tags": ["python", "property", "getter", "setter", "encapsulation"],
+    "languages": ["python"],
+    "error_patterns": ["can't set attribute", "attribute is read-only", "@property"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Define `@property` for getter",
+      "2. Define `@<name>.setter` for setter (same method name)",
+      "3. Define `@<name>.deleter` for delete",
+      "4. Underscore prefix for backing attribute: `self._name`",
+      "5. Property methods share the name with the public interface"
+    ],
+    "code_example": "@property\ndef name(self):\n    return self._name\n@name.setter\ndef name(self, value):\n    if not value:\n        raise ValueError('Name required')\n    self._name = value",
+    "related_topics": ["property", "encapsulation", "descriptors", "OOP"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: context manager __exit__ exception handling",
+    "tags": ["python", "context manager", "__exit__", "exception"],
+    "languages": ["python"],
+    "error_patterns": ["__exit__", "context manager", "exception in context manager"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. `__exit__(self, exc_type, exc_val, exc_tb)` receives exception info",
+      "2. Return True to suppress exception, False to propagate",
+      "3. Use `@contextmanager` decorator for simple cases",
+      "4. Use `contextlib.suppress(ExceptionType)` to ignore specific exceptions",
+      "5. Use `contextlib.redirect_stdout` for IO redirection"
+    ],
+    "code_example": "from contextlib import contextmanager\n@contextmanager\ndef managed_resource():\n    resource = acquire()\n    try:\n        yield resource\n    finally:\n        resource.release()",
+    "related_topics": ["context manager", "with statement", "contextlib", "resource management"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: functools.lru_cache for memoization",
+    "tags": ["python", "caching", "memoization", "performance"],
+    "languages": ["python"],
+    "error_patterns": ["slow recursive", "repeated computation", "cache", "memoization"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Decorate with `@functools.lru_cache(maxsize=128)`",
+      "2. Use `@functools.cache` (Python 3.9+) for unlimited cache",
+      "3. Arguments must be hashable",
+      "4. Use `cache_clear()` to reset cache",
+      "5. Use `cache_info()` to see hits/misses",
+      "6. Use `@functools.cached_property` for class properties"
+    ],
+    "code_example": "import functools\n@functools.lru_cache(maxsize=128)\ndef fibonacci(n):\n    if n < 2:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)",
+    "related_topics": ["caching", "functools", "memoization", "DP"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: dataclass default_factory",
+    "tags": ["python", "dataclass", "default", "mutable"],
+    "languages": ["python"],
+    "error_patterns": ["mutable default", "field with default", "default_factory"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Use `field(default_factory=list)` for mutable defaults",
+      "2. Use `field(default_factory=dict)` for dict defaults",
+      "3. Use `field(default_factory=lambda: MyClass())` for custom objects",
+      "4. Never use mutable literals as default in dataclass",
+      "5. Use `field(default=...)` for immutable defaults"
+    ],
+    "code_example": "from dataclasses import dataclass, field\n@dataclass\nclass ShoppingCart:\n    items: list = field(default_factory=list)\n    user: str = ''\n    metadata: dict = field(default_factory=dict)",
+    "related_topics": ["dataclass", "field", "default", "mutable"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: typing and type annotations best practices",
+    "tags": ["python", "typing", "type hints", "mypy"],
+    "languages": ["python"],
+    "error_patterns": ["mypy error", "type hint", "incompatible type", "expected Type"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Use `List[str]`, `Dict[str, int]` from typing module",
+      "2. Use `Optional[str]` for nullable (Python 3.10+: `str | None`)",
+      "3. Use `Union[int, str]` (Python 3.10+: `int | str`)",
+      "4. Use `Any` sparingly",
+      "5. Use `TypeVar` for generics",
+      "6. Use `Literal['a', 'b']` for constrained string values",
+      "7. Run `mypy --strict` for thorough checking"
+    ],
+    "code_example": "from typing import Optional, List, Union\ndef process(items: List[str], default: Optional[str] = None) -> Union[str, int]:\n    if default:\n        return default\n    return len(items)",
+    "related_topics": ["typing", "mypy", "type hints", "generics"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: ordered dict before Python 3.7",
+    "tags": ["python", "dict", "ordered", "OrderedDict"],
+    "languages": ["python"],
+    "error_patterns": ["dict ordering", "OrderedDict vs dict", "insertion order"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Python 3.7+ dicts maintain insertion order (language guarantee)",
+      "2. Use `OrderedDict` for explicit ordering semantics or reordering operations",
+      "3. `OrderedDict.move_to_end()` is not available on regular dicts",
+      "4. Use `sorted(dict.items())` for key-based ordering"
+    ],
+    "code_example": "from collections import OrderedDict\nod = OrderedDict()\nod['a'] = 1\nod['b'] = 2\nod.move_to_end('a')  # Move 'a' to end",
+    "related_topics": ["dict", "OrderedDict", "collections", "ordering"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: deep recursion in JSON serialization",
+    "tags": ["python", "json", "serialization", "recursion"],
+    "languages": ["python"],
+    "error_patterns": ["JSON serialization", "TypeError: Object of type", "is not JSON serializable", "RecursionError when serializing"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Add `default=str` to `json.dumps()` for non-serializable objects",
+      "2. Use `cls=CustomEncoder` for custom types",
+      "3. Avoid circular references",
+      "4. Use `json.dumps(obj, default=lambda o: repr(o))` for debugging",
+      "5. Use `dataclasses.asdict()` or `pydantic.model_dump()` for models"
+    ],
+    "code_example": "import json\nfrom datetime import datetime\ndata = {'time': datetime.now(), 'value': 42}\njson_str = json.dumps(data, default=str, indent=2)",
+    "related_topics": ["json", "serialization", "datetime", "custom encoder"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: pip install fails with SSL errors",
+    "tags": ["python", "pip", "ssl", "certificate", "network"],
+    "languages": ["python"],
+    "error_patterns": ["SSL: CERTIFICATE_VERIFY_FAILED", "Could not fetch URL", "ssl certificate", "insecure"],
+    "severity": "high",
+    "solution_steps": [
+      "1. Upgrade pip: `python -m pip install --upgrade pip`",
+      "2. Use --trusted-host: `pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org <pkg>`",
+      "3. Set PIP_CERT env var to custom CA bundle",
+      "4. On Windows: run Python installer and select 'Install Certificates'",
+      "5. Use conda/conda-forge as alternative package source",
+      "6. Check corporate proxy settings"
+    ],
+    "code_example": "python -m pip install --upgrade pip\npip install --trusted-host pypi.org --trusted-host=pypi.python.org --trusted-host=files.pythonhosted.org requests",
+    "related_topics": ["pip", "SSL", "certificates", "proxy"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: pytest fixtures not found",
+    "tags": ["python", "pytest", "testing", "fixtures"],
+    "languages": ["python"],
+    "error_patterns": ["fixture '.*' not found", "usefixtures", "pytest fixture", "conftest"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Define fixtures in `conftest.py` at the correct directory level",
+      "2. Fixture names must match the test function parameter names",
+      "3. Use `@pytest.fixture` decorator",
+      "4. Use `pytest.fixture(autouse=True)` for automatic application",
+      "5. Check conftest.py scope: fixtures are visible to subdirectories",
+      "6. Use `scope='session'`, `scope='module'`, or `scope='function'` appropriately"
+    ],
+    "code_example": "# conftest.py\nimport pytest\n@pytest.fixture\ndef db_connection():\n    conn = create_connection()\n    yield conn\n    conn.close()\n\n# test.py\ndef test_query(db_connection):\n    assert db_connection.execute('SELECT 1')",
+    "related_topics": ["pytest", "fixtures", "conftest", "testing"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: abstract base classes (ABC)",
+    "tags": ["python", "abc", "abstract", "interface", "inheritance"],
+    "languages": ["python"],
+    "error_patterns": ["Can't instantiate abstract class", "abstract method", "TypeError: Can't instantiate abstract class"],
+    "severity": "medium",
+    "solution_steps": [
+      "1. Inherit from `ABC` (from `abc` module)",
+      "2. Decorate methods with `@abstractmethod`",
+      "3. Implement all abstract methods in concrete classes",
+      "4. Abstract classes cannot be instantiated directly",
+      "5. Use `@abstractproperty` for abstract properties"
+    ],
+    "code_example": "from abc import ABC, abstractmethod\nclass BaseProcessor(ABC):\n    @abstractmethod\n    def process(self, data: str) -> str:\n        pass\nclass UpperProcessor(BaseProcessor):\n    def process(self, data: str) -> str:\n        return data.upper()",
+    "related_topics": ["abc", "abstract", "interfaces", "inheritance", "OOP"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: generator close and throw methods",
+    "tags": ["python", "generator", "close", "throw", "coroutine"],
+    "languages": ["python"],
+    "error_patterns": ["GeneratorExit", "generator ignored GeneratorExit", "throw into generator"],
+    "severity": "low",
+    "solution_steps": [
+      "1. `gen.close()` raises GeneratorExit inside generator",
+      "2. `gen.throw(exc_type)` raises exception inside generator",
+      "3. Generators can catch GeneratorExit in try/finally for cleanup",
+      "4. Use `gen.send(None)` to prime a coroutine generator",
+      "5. Prefer `yield from` for delegation"
+    ],
+    "code_example": "def my_gen():\n    try:\n        while True:\n            value = yield\n            print(value)\n    except GeneratorExit:\n        print('Cleaning up')\ng = my_gen()\nnext(g)  # Prime\ng.send('hello')\ng.close()  # Triggers GeneratorExit",
+    "related_topics": ["generators", "coroutines", "yield", "GeneratorExit"],
+    "source": "curated"
+  },
+  {
+    "title": "Python: frozenset usage and set immutability",
+    "tags": ["python", "set", "frozenset", "immutable"],
+    "languages": ["python"],
+    "error_patterns": ["unhashable type: 'set'", "unhashable type: 'list'", "TypeError: unhashable"],
+    "severity": "low",
+    "solution_steps": [
+      "1. Convert to `frozenset` to make a set hashable",
+      "2. Use `frozenset` as dict key or set member",
+      "3. `frozenset` supports set operations (union, intersection)",
+      "4. Convert list to `tuple` to make it hashable",
+      "5. Check `__hash__` availability for custom types"
+    ],
+    "code_example": "my_dict = {frozenset({1, 2, 3}): 'value'}\nunique_combos = set()\nunique_combos.add(frozenset([1, 2, 3]))",
+    "related_topics": ["set", "hashable", "frozenset", "immutability"],
+    "source": "curated"
+  }
+]
