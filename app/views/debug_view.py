@@ -96,6 +96,7 @@ class DebugView:
         self._diff_cards = []
         self._changes_tab_index = 0
         self._has_welcome = False
+        self._input_focused = False
 
         self.text_p = DARK_TEXT_PRIMARY if is_dark else LIGHT_TEXT_PRIMARY
         self.text_s = DARK_TEXT_SECONDARY if is_dark else LIGHT_TEXT_SECONDARY
@@ -165,6 +166,8 @@ class DebugView:
             border=border_all(1, DARK_BORDER if is_dark else LIGHT_BORDER),
             bgcolor=DARK_BG_SURFACE if is_dark else LIGHT_BG_SURFACE,
             on_change=self._on_input_change,
+            on_focus=lambda _: setattr(self, '_input_focused', True),
+            on_blur=lambda _: setattr(self, '_input_focused', False),
         )
 
         self.attach_btn = ft.IconButton(
@@ -211,7 +214,7 @@ class DebugView:
 
         # Register page-level keyboard handler for Ctrl+Enter
         def _page_key_handler(e: ft.KeyboardEvent):
-            if e.ctrl and e.key == "Enter" and self.error_input.focused:
+            if e.ctrl and e.key == "Enter" and self._input_focused:
                 self._on_send(None)
         page.on_keyboard_event = _page_key_handler
 
