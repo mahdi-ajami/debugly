@@ -153,7 +153,7 @@ class DebugView:
         self._token_label = ft.Text("0 tok", size=10, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._token_bar = ft.Container(content=self._token_label, padding=padding_symmetric(horizontal=6))
 
-        # Input field with Ctrl+Enter detection
+        # Input field - Ctrl+Enter handled via page.on_keyboard_event
         self.error_input = ft.TextField(
             hint_text="Type error or /command...",
             expand=1,
@@ -165,7 +165,6 @@ class DebugView:
             border=border_all(1, DARK_BORDER if is_dark else LIGHT_BORDER),
             bgcolor=DARK_BG_SURFACE if is_dark else LIGHT_BG_SURFACE,
             on_change=self._on_input_change,
-            on_key=self._on_key_event,
         )
 
         self.attach_btn = ft.IconButton(
@@ -210,6 +209,12 @@ class DebugView:
             padding=padding_only(top=4, bottom=2),
         )
 
+        # Register page-level keyboard handler for Ctrl+Enter
+        def _page_key_handler(e: ft.KeyboardEvent):
+            if e.ctrl and e.key == "Enter" and self.error_input.focused:
+                self._on_send(None)
+        page.on_keyboard_event = _page_key_handler
+
         self._drop_instance["set_on_change"](self._on_drop_files_changed)
         self._drop_instance["set_on_tap"](self._on_drop_zone_tap)
         try:
@@ -242,10 +247,6 @@ class DebugView:
         self._token_label.value = f"~{tokens} tok   {chars} chr"
         self._token_label.color = color
         self._token_label.update()
-
-    def _on_key_event(self, e: ft.KeyboardEvent):
-        if e.ctrl and e.key == "Enter":
-            self._on_send(None)
 
     async def _on_attach(self, e):
         fp = ft.FilePicker()
