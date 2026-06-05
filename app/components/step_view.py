@@ -96,12 +96,10 @@ def image_preview_card(path: str, is_dark: bool = False):
                 ft.Text(fname, size=12, weight=ft.FontWeight.W_500, color=DARK_TEXT_PRIMARY if is_dark else LIGHT_TEXT_PRIMARY),
                 ft.Text("Processing...", size=10, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED),
                 ft.ProgressBar(width=120, height=3, color=accent, bgcolor=accent_subtle),
-            ], spacing=2, expand=1, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            ], spacing=2, expand=1, alignment=ft.MainAxisAlignment.CENTER),
         ], spacing=10),
         padding=padding_symmetric(horizontal=12, vertical=8),
         border_radius=8,
         bgcolor=accent_subtle,
         border=border_all(1, accent + "40"),
-        animate_opacity=300,
-        opacity=0,
     )
