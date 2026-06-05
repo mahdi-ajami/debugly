@@ -39,10 +39,14 @@ class Message:
 class Session:
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     project_name: str = ""
+    session_name: str = ""
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
     context: dict = field(default_factory=dict)
     messages: list = field(default_factory=list)
+    skills: list = field(default_factory=lambda: ["debugging"])
+    role: str = "developer"
+    prompt_style: str = "detailed"
 
     def add_message(self, role: str, content: str, steps: list | None = None):
         msg = Message(role=role, content=content, steps=steps or [])
@@ -61,20 +65,28 @@ class Session:
         return {
             "id": self.id,
             "project_name": self.project_name,
+            "session_name": self.session_name,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "context": self.context,
             "messages": [m.to_dict() for m in self.messages],
+            "skills": self.skills,
+            "role": self.role,
+            "prompt_style": self.prompt_style,
         }
 
     @classmethod
-    def create(cls, project, source_file: str = ""):
+    def create(cls, project, source_file: str = "", session_name: str = "", skills: list | None = None, role: str = "developer", prompt_style: str = "detailed"):
         return cls(
             project_name=project.name,
+            session_name=session_name,
             context={
                 "source_file": source_file,
                 "project_root": str(project.root_path),
             },
+            skills=skills or ["debugging"],
+            role=role,
+            prompt_style=prompt_style,
         )
 
     @classmethod
@@ -93,9 +105,13 @@ class Session:
         s = cls(
             id=data["id"],
             project_name=data.get("project_name", ""),
+            session_name=data.get("session_name", ""),
             created_at=data.get("created_at", ""),
             updated_at=data.get("updated_at", ""),
             context=data.get("context", {}),
+            skills=data.get("skills", ["debugging"]),
+            role=data.get("role", "developer"),
+            prompt_style=data.get("prompt_style", "detailed"),
         )
         for m in data.get("messages", []):
             steps = [StepEvent(**s) for s in m.get("steps", [])]

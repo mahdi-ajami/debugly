@@ -232,10 +232,26 @@ class MainView:
         if self.page:
             self.page.update()
 
-    def _on_new_session(self):
+    def _on_new_session(self, preconfig: dict | None = None):
         if not self.project:
             return
-        session = Session.create(project=self.project, source_file="")
+        if preconfig:
+            # Called after config form submits
+            self._do_create_session(preconfig)
+            return
+        # Show config dialog first
+        overlay = self.debug_view.show_session_config(
+            on_config_done=lambda cfg: self._on_new_session(cfg)
+        )
+
+    def _do_create_session(self, cfg: dict):
+        session = Session.create(
+            project=self.project, source_file="",
+            session_name=cfg.get("name", ""),
+            skills=cfg.get("skills", ["debugging"]),
+            role=cfg.get("role", "developer"),
+            prompt_style=cfg.get("prompt_style", "detailed"),
+        )
         self._current_session = session
         self.project.active_session_id = session.id
         self.project.save()
