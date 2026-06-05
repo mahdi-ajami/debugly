@@ -90,7 +90,7 @@ def image_preview_card(path: str, is_dark: bool = False):
     return ft.Container(
         content=ft.Row([
             ft.Container(
-                content=ft.Image(src=path, width=80, height=60, fit=ft.ImageFit.COVER, border_radius=6),
+                content=ft.Image(src=path, width=80, height=60, fit=ft.BoxFit.COVER, border_radius=6),
             ),
             ft.Column([
                 ft.Text(fname, size=12, weight=ft.FontWeight.W_500, color=DARK_TEXT_PRIMARY if is_dark else LIGHT_TEXT_PRIMARY),
