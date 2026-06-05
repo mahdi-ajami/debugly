@@ -188,9 +188,10 @@ class DebugView:
         self._session_name_field = ft.TextField(
             value="",
             hint_text="Session name",
-            text_size=16, weight=ft.FontWeight.BOLD,
-            border="none", bgcolor="transparent",
-            color=self.text_p, text_style=ft.TextStyle(),
+            text_size=16,
+            border=ft.InputBorder.NONE, bgcolor="transparent",
+            color=self.text_p,
+            text_style=ft.TextStyle(weight=ft.FontWeight.BOLD),
             on_submit=self._on_session_name_change,
             on_blur=self._on_session_name_change,
             dense=True,
