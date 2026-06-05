@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import flet as ft
 
@@ -20,6 +21,8 @@ from app.components.chat_bubble import chat_bubble
 from app.components.drag_drop_zone import drag_drop_zone
 from app.components.diff_view import parse_diffs_from_text, diff_view
 from app.components.step_view import typing_indicator, step_view, image_preview_card
+
+logger = logging.getLogger(__name__)
 
 _FILE_ICONS = {
     "py": ft.Icons.CODE, "js": ft.Icons.JAVASCRIPT, "ts": ft.Icons.DATA_OBJECT,
@@ -76,6 +79,9 @@ def _file_attachment_chip(fname: str, is_dark: bool):
     )
 
 
+_IMAGE_EXTS = {"png", "jpg", "jpeg", "bmp", "webp"}
+
+
 class DebugView:
     def __init__(self, page, agent, is_dark=False, on_new_session=None, status_bar=None):
         self.page = page
@@ -97,6 +103,12 @@ class DebugView:
         self._changes_tab_index = 0
         self._has_welcome = False
         self._input_focused = False
+
+        # Eager processing caches
+        self._eager_vlm_results: dict[str, str] = {}
+        self._eager_file_contents: dict[str, str] = {}
+        # Track preview card refs so we can update them dynamically
+        self._preview_cards: dict[str, ft.Container] = {}
 
         self.text_p = DARK_TEXT_PRIMARY if is_dark else LIGHT_TEXT_PRIMARY
         self.text_s = DARK_TEXT_SECONDARY if is_dark else LIGHT_TEXT_SECONDARY
@@ -154,7 +166,6 @@ class DebugView:
         self._token_label = ft.Text("0 tok", size=10, color=DARK_TEXT_MUTED if is_dark else LIGHT_TEXT_MUTED)
         self._token_bar = ft.Container(content=self._token_label, padding=padding_symmetric(horizontal=6))
 
-        # Input field - Ctrl+Enter handled via page.on_keyboard_event
         self.error_input = ft.TextField(
             hint_text="Type error or /command...",
             expand=1,
@@ -195,6 +206,9 @@ class DebugView:
             visible=False,
         )
 
+        # Singleton FilePicker
+        self._file_picker = ft.FilePicker()
+
         self._drop_instance = drag_drop_zone(is_dark=is_dark)
         self.drop_zone = self._drop_instance["zone"]
 
@@ -212,7 +226,6 @@ class DebugView:
             padding=padding_only(top=4, bottom=2),
         )
 
-        # Register page-level keyboard handler for Ctrl+Enter
         def _page_key_handler(e: ft.KeyboardEvent):
             if e.ctrl and e.key == "Enter" and self._input_focused:
                 self._on_send(None)
@@ -225,15 +238,76 @@ class DebugView:
         except RuntimeError:
             pass
 
+    # ---- File picker ----
     async def _on_drop_zone_tap(self):
-        fp = ft.FilePicker()
-        result = await fp.pick_files(
+        result = await self._file_picker.pick_files(
             allow_multiple=True,
             allowed_extensions=["png", "jpg", "jpeg", "bmp", "webp", "txt", "py", "js", "ts", "pdf", "md", "json", "yaml", "yml", "log", "csv"],
         )
         if result:
             self._drop_instance["add_paths"]([f.path for f in result])
 
+    async def _on_attach(self, e):
+        result = await self._file_picker.pick_files(
+            allow_multiple=True,
+            allowed_extensions=["png", "jpg", "jpeg", "bmp", "webp", "txt", "py", "js", "ts", "pdf", "md", "json", "yaml", "yml", "log", "csv"],
+        )
+        if result:
+            self._drop_instance["add_paths"]([f.path for f in result])
+
+    # ---- Eager processing on drop ----
+    def _on_drop_files_changed(self, paths):
+        self._attach_chips.controls.clear()
+        self._preview_cards.clear()
+        for p in paths:
+            fname = p.split("\\")[-1]
+            chip = _file_attachment_chip(fname, self.is_dark)
+            self._attach_chips.controls.append(chip)
+            ext = _get_ext(fname)
+            if ext in _IMAGE_EXTS:
+                card = image_preview_card(p, self.is_dark)
+                self._attach_chips.controls.append(card)
+                self._preview_cards[p] = card
+                # Fire-and-forget eager VLM
+                asyncio.create_task(self._eager_process_image(p, card))
+            else:
+                # Fire-and-forget eager file read
+                asyncio.create_task(self._eager_read_file(p))
+        self._attachment_bar.visible = bool(paths)
+        self._attachment_bar.update()
+
+    async def _eager_process_image(self, path: str, card: ft.Container):
+        try:
+            from PIL import Image
+            from core.vlm_handler import VLMHandler
+            img = Image.open(path)
+            vlm = VLMHandler(providers=self.agent.providers)
+            text = await asyncio.to_thread(vlm.extract_text, img)
+            self._eager_vlm_results[path] = text
+            # Update card inline with a status message
+            def _update():
+                card.content = ft.Row([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color=SUCCESS),
+                    ft.Text(f"VLM done ({len(text)} chars)", size=10, color=DARK_TEXT_SECONDARY if self.is_dark else LIGHT_TEXT_SECONDARY),
+                ], spacing=4)
+                card.update()
+            try:
+                _update()
+            except RuntimeError:
+                pass
+        except Exception as exc:
+            logger.warning("Eager VLM failed for %s: %s", path, exc)
+            self._eager_vlm_results[path] = ""
+
+    async def _eager_read_file(self, path: str):
+        try:
+            content = await asyncio.to_thread(lambda: open(path, encoding="utf-8", errors="replace").read())
+            self._eager_file_contents[path] = content
+        except Exception as exc:
+            logger.warning("Eager file read failed for %s: %s", path, exc)
+            self._eager_file_contents[path] = ""
+
+    # ---- Misc UI helpers ----
     def _on_input_change(self, e):
         text = e.control.value or ""
         rtl = is_rtl_text(text)
@@ -250,15 +324,6 @@ class DebugView:
         self._token_label.value = f"~{tokens} tok   {chars} chr"
         self._token_label.color = color
         self._token_label.update()
-
-    async def _on_attach(self, e):
-        fp = ft.FilePicker()
-        result = await fp.pick_files(
-            allow_multiple=True,
-            allowed_extensions=["png", "jpg", "jpeg", "bmp", "webp", "txt", "py", "js", "ts", "pdf", "md", "json", "yaml", "yml", "log", "csv"],
-        )
-        if result:
-            self._drop_instance["add_paths"]([f.path for f in result])
 
     def _on_stop(self, e):
         self._stop_requested = True
@@ -423,9 +488,11 @@ class DebugView:
             pass
         self._refresh_changes_panel()
 
-    def _process_message(self, text: str, images: list[str], files: list[str]):
+    # ---- Core async message processing ----
+    async def _process_message_task(self, text: str, images: list[str], files: list[str]):
         self._processing = True
         self._stop_requested = False
+        self._current_events = []
         self._update_status("processing")
         self._sidebar_step_list.controls.clear()
         self._sidebar_file_list.controls.clear()
@@ -455,7 +522,7 @@ class DebugView:
 
         history_list = [{"role": m.role, "content": m.content} for m in (self._session.messages if self._session else [])]
 
-        # --- 3-Stage Pipeline ---
+        # Build assistant container (hidden until first content)
         steps_col = ft.Column(spacing=4)
         typing_ind = typing_indicator(self.is_dark)
         md = ft.Markdown(
@@ -470,6 +537,7 @@ class DebugView:
             bgcolor=DARK_BG_SURFACE if self.is_dark else LIGHT_BG_SURFACE,
             border_radius=ft.BorderRadius(top_left=4, top_right=16, bottom_left=16, bottom_right=16),
             border=border_all(0.5, DARK_BORDER if self.is_dark else LIGHT_BORDER),
+            visible=False,  # hidden until markdown content arrives
         )
         assistant_content = ft.Column([steps_col, typing_ind, bubble_container], spacing=6)
         row_wrapper = ft.Container(content=assistant_content, margin=ft.Margin(left=26, top=0, right=0, bottom=0))
@@ -480,31 +548,42 @@ class DebugView:
         self.chat_log.controls.append(row_wrapper)
         self.page.update()
 
-        # Stage 1: Warmup
-        warmup_step = step_view("warmup", "Initializing agents...", is_dark=self.is_dark)
-        steps_col.controls.append(warmup_step)
+        # Warmup step
+        steps_col.controls.append(step_view("warmup", "Initializing agents...", is_dark=self.is_dark))
         steps_col.update()
         self._add_sidebar_step("think", "Warming up agents...")
 
+        # Decide query: use eager VLM results if available
         query = text
-        if not query and images:
-            from PIL import Image
+        eager_vlm = self._eager_vlm_results.get(images[0]) if images else None
+        if not query and images and eager_vlm:
+            query = eager_vlm
+        elif not query and images and not eager_vlm:
+            # Fallback: process inline (shouldn't happen if eager works)
             try:
-                img = Image.open(images[0])
+                from PIL import Image as PILImage
                 from core.vlm_handler import VLMHandler
+                img = PILImage.open(images[0])
                 vlm = VLMHandler(providers=self.agent.providers)
                 query = vlm.extract_text(img)
             except Exception:
                 query = "Analyze the attached screenshot"
 
-        # Stage 2: VLM extraction (if we had images and no text)
-        if images and not text:
-            vlm_step = step_view("image", "Processing image with VLM...", is_dark=self.is_dark)
-            steps_col.controls.append(vlm_step)
+        # Show VLM step when images present
+        if images:
+            vlm_text = self._eager_vlm_results.get(images[0], query)
+            steps_col.controls.append(step_view("image", f"VLM extracted ({len(vlm_text)} chars)", is_dark=self.is_dark))
             steps_col.update()
 
-        # Stage 3: Solver generating
-        event_stream, state = self.agent.solve(query, stream=True, history=history_list)
+        # Build context dict for agent
+        ctx = {"images": images, "files": files, "file_contents": self._eager_file_contents}
+        if images:
+            ctx["vlm_text"] = self._eager_vlm_results.get(images[0], "")
+
+        # Start the agent pipeline
+        event_stream, state = await asyncio.to_thread(
+            self.agent.solve, query, True, history_list, ctx
+        )
         self._current_arm = state.arm_selected
         self.last_state = state
 
@@ -512,6 +591,7 @@ class DebugView:
         for event in event_stream:
             if self._stop_requested:
                 break
+            self._current_events.append(event)
             if event.type in ("think", "retrieve", "tool", "warmup", "wait"):
                 sv = step_view(event.type, event.content, event.metadata, is_dark=self.is_dark)
                 steps_col.controls.append(sv)
@@ -521,12 +601,16 @@ class DebugView:
                 sv = step_view("error", event.content, event.metadata, is_dark=self.is_dark)
                 steps_col.controls.append(sv)
                 steps_col.update()
+                bubble_container.visible = True
                 md.value = event.content
                 md.update()
+                bubble_container.update()
             elif event.type == "generate":
                 if typing_ind in assistant_content.controls:
                     assistant_content.controls.remove(typing_ind)
                     assistant_content.update()
+                bubble_container.visible = True
+                bubble_container.update()
                 if event.metadata.get("partial"):
                     full_text += event.content
                     md.value = full_text
@@ -547,8 +631,9 @@ class DebugView:
             self._add_sidebar_file(d["file_path"])
         self._refresh_changes_panel()
 
+        # Save assistant message WITH steps
         if self._session and full_text:
-            self._session.add_message(role="assistant", content=full_text, steps=[])
+            self._session.add_message(role="assistant", content=full_text, steps=self._current_events)
             self._session.save()
         arm_name = ["Conservative", "Balanced", "Creative"][self._current_arm] if self._current_arm is not None else None
         self._update_status("ready", arm_name)
@@ -556,9 +641,16 @@ class DebugView:
         self._processing = False
         self.send_btn.visible = True
         self.stop_btn.visible = False
-        self.send_btn.update()
-        self.stop_btn.update()
+        try:
+            self.send_btn.update()
+            self.stop_btn.update()
+        except RuntimeError:
+            pass
 
+    def _process_message(self, text: str, images: list[str], files: list[str]):
+        asyncio.create_task(self._process_message_task(text, images, files))
+
+    # ---- Send / MCP ----
     def _on_send(self, e):
         if self._processing:
             return
@@ -572,14 +664,18 @@ class DebugView:
             self._handle_mcp_command(text, drop_files)
             return
 
-        images = [p for p in drop_files if _get_ext(p) in {"png", "jpg", "jpeg", "bmp", "webp"}]
-        code_files = [p for p in drop_files if _get_ext(p) not in {"png", "jpg", "jpeg", "bmp", "webp"}]
+        images = [p for p in drop_files if _get_ext(p) in _IMAGE_EXTS]
+        code_files = [p for p in drop_files if _get_ext(p) not in _IMAGE_EXTS]
 
         self.error_input.value = ""
         self.error_input.update()
         self._token_label.value = "0 tok"
         self._token_label.update()
         self._drop_instance["clear"]()
+
+        # Clear eager caches after sending (they've been consumed)
+        self._eager_vlm_results.clear()
+        self._eager_file_contents.clear()
 
         self._process_message(text, images, code_files)
 
@@ -631,28 +727,22 @@ class DebugView:
             self._add_bubble(f"Opened file", is_user=True, attachments=[_file_attachment_chip(fname, self.is_dark)])
         for msg in session.messages:
             is_user = msg.role == "user"
-            self._add_bubble(msg.content, is_user=is_user, is_markdown=not is_user, timestamp=msg.timestamp)
+            steps = msg.steps if hasattr(msg, "steps") else []
+            self._add_bubble(msg.content, is_user=is_user, is_markdown=not is_user, timestamp=msg.timestamp, steps=steps)
         self.page.update()
 
     def _update_status(self, mode="idle", arm=None):
         if self._status_bar:
             self._status_bar.set_mode(mode, arm)
 
-    def _on_drop_files_changed(self, paths):
-        self._attach_chips.controls.clear()
-        for p in paths:
-            fname = p.split("\\")[-1]
-            chip = _file_attachment_chip(fname, self.is_dark)
-            self._attach_chips.controls.append(chip)
-            # Add image preview card for images
-            if _get_ext(fname) in {"png", "jpg", "jpeg", "bmp", "webp"}:
-                preview = image_preview_card(p, self.is_dark)
-                self._attach_chips.controls.append(preview)
-        self._attachment_bar.visible = bool(paths)
-        self._attachment_bar.update()
+    def _on_drop_files_changed_clear(self):
+        self._eager_vlm_results.clear()
+        self._eager_file_contents.clear()
 
     def _on_clear_attachments(self, e):
         self._drop_instance["clear"]()
+        self._eager_vlm_results.clear()
+        self._eager_file_contents.clear()
 
     def build(self):
         input_row = ft.Container(
@@ -680,7 +770,6 @@ class DebugView:
             ),
         ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
-        # Build main chat area
         chat_area = ft.Column([self.chat_log], expand=2, spacing=2)
         if not self.chat_log.controls and not self._has_welcome:
             self._has_welcome = True

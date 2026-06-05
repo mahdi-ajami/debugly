@@ -49,7 +49,7 @@ class DebugAgent:
             enrichment["language"] = "unknown"
         return enrichment
 
-    def solve(self, error_text: str, stream: bool = False, history: list | None = None):
+    def solve(self, error_text: str, stream: bool = False, history: list | None = None, context: dict | None = None):
         self._start_time = time.time()
         state = AgentState(error_text=error_text, guardrails_passed=True)
         state.arm_selected = self.bandit.select_arm()
@@ -96,16 +96,20 @@ class DebugAgent:
             if enrichment.get("error_type", "unknown") != "unknown":
                 yield StepEvent(type="think", content=f"Error type: {enrichment['error_type']}")
 
+            ctx = context or {}
             inp = AgentInput(
                 query=clean_text,
-                images=[],
-                files=[],
+                context=clean_text,
+                images=ctx.get("images", []),
+                files=ctx.get("files", []),
                 history=history or [],
                 metadata={
                     "arm": state.arm_selected,
                     "arm_config": arm_cfg,
                     "enrichment": enrichment,
                     "num_docs": num_docs,
+                    "vlm_text": ctx.get("vlm_text", ""),
+                    "file_contents": ctx.get("file_contents", {}),
                     "language": enrichment.get("language", "unknown"),
                     "error_type": enrichment.get("error_type", "unknown"),
                     "style_instruction": arm_cfg.get("prompt_style", "balanced"),
