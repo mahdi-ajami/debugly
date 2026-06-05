@@ -209,7 +209,7 @@ class DebugView:
                 ft.Row([
                     self._attach_chips,
                     ft.Container(expand=1),
-                    ft.TextButton("Clear", on_click=self._on_clear_attachments, style=ft.ButtonStyle(color=self.text_m, text_size=11)),
+                    ft.TextButton("Clear", on_click=self._on_clear_attachments, style=ft.ButtonStyle(color=self.text_m)),
                 ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ]),
             visible=False, padding=padding_only(top=4, bottom=2),
